@@ -49,7 +49,7 @@ export function QueueCheckoutPage({
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex-1 flex flex-col">
       <TopBar onBack={onBack} title="ยืนยันคิวของคุณ" />
       <StepDots step={2} />
 
