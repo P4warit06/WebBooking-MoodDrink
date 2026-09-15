@@ -26,7 +26,7 @@ export function ConfirmationPage({
 
   if (!order) {
     return (
-      <div className="h-full flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center">
         <p className="text-sm text-neutral-400">กำลังโหลดสถานะคิว...</p>
       </div>
     );
@@ -35,7 +35,7 @@ export function ConfirmationPage({
   const isReady = order.status === "ready" || order.status === "completed";
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex-1 flex flex-col">
       <TopBar title="สถานะคิวของคุณ" />
 
       <div className="px-6 pt-4 text-center">

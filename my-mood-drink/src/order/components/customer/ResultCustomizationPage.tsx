@@ -5,6 +5,7 @@ import { StepDots } from "../shared/StepDots";
 import { useAddons } from "../../hooks/useAddons";
 import type { Mood, OrderDraft, SweetnessLevel } from "../../types";
 
+
 const SWEETNESS_LEVELS: SweetnessLevel[] = ["50%", "ปกติ", "หวานมากพิเศษ"];
 
 interface ResultCustomizationPageProps {
@@ -32,7 +33,7 @@ export function ResultCustomizationPage({
     mood.basePrice + selectedAddons.reduce((sum, a) => sum + a.price, 0);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex-1 flex flex-col">
       <TopBar onBack={onBack} title="เครื่องดื่มของคุณ" />
       <StepDots step={1} />
 
