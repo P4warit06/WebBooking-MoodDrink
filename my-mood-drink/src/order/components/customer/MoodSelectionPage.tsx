@@ -61,13 +61,13 @@ export function MoodSelectionPage({
               key={mood.id}
               onClick={() => onSelectMood(mood)}
               className="group relative rounded-3xl p-5 flex flex-col items-center justify-center gap-3 text-center 
-                         bg-white/60 backdrop-blur-md border border-white/80 
-                         shadow-[0_8px_20px_rgba(244,114,182,0.06)] 
-                         hover:bg-white/80 hover:shadow-lg active:scale-95 transition-all duration-300"
+                       bg-white/60 backdrop-blur-md border border-white/80 
+                       shadow-[0_8px_20px_rgba(244,114,182,0.06)] 
+                       hover:bg-white/80 hover:shadow-lg active:scale-95 transition-all duration-300"
             >
-              {/* Icon Container ด้านใน */}
+              {/* Image / Icon Container ด้านใน (เปลี่ยนจาก emoji เป็นแสดงรูปภาพจาก imageUrl) */}
               <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner transition-transform group-hover:scale-110"
+                className="w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden shadow-inner transition-transform group-hover:scale-110"
                 style={{
                   backgroundColor: mood.colorAccent
                     ? `${mood.colorAccent}20`
@@ -82,11 +82,7 @@ export function MoodSelectionPage({
                 <span className="text-base font-semibold text-slate-800 leading-tight font-[itim]">
                   {mood.name}
                 </span>
-                {mood.englishName && (
-                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1">
-                    {mood.englishName}
-                  </span>
-                )}
+                
               </div>
             </button>
           ))}
