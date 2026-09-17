@@ -4,8 +4,9 @@ import { MoodSelectionPage } from "./order/components/customer/MoodSelectionPage
 import { ResultCustomizationPage } from "./order/components/customer/ResultCustomizationPage";
 import { QueueCheckoutPage } from "./order/components/customer/QueueCheckoutPage";
 import { ConfirmationPage } from "./order/components/customer/ConfirmationPage";
-import { BottomNav, type NavTab } from "./Bottomnav";
+import { BottomNav, type NavTab } from "./BottomNav";
 import type { Mood, OrderDraft } from "./order/types";
+import { useMoods } from "./order/hooks/useMood"; // ปรับ path ตามตำแหน่งไฟล์ hook จริงของคุณ
 
 type Page = "home" | "mood" | "result" | "checkout" | "confirmation";
 
@@ -19,6 +20,11 @@ export default function App() {
     localStorage.getItem(LAST_ORDER_KEY)
   );
 
+  // เรียกใช้ Hook เพื่อดึงข้อมูล moods มาทดสอบ
+  const { moods, loading } = useMoods();
+  console.log("⏳ กำลังโหลด:", loading);
+  console.log("🔥 ข้อมูล Moods ที่ดึงมาได้:", moods);
+
   const goHome = () => {
     setPage("home");
     setMood(null);
@@ -31,14 +37,10 @@ export default function App() {
     setPage("confirmation");
   };
 
-  // The tab bar is a "browse" affordance — once someone is mid-order
-  // (mood → confirmation) the TopBar back-arrow flow takes over instead,
-  // same as the mockup only showing it on the landing screen.
   const showBottomNav = page === "home";
 
   const handleNavigate = (tab: NavTab) => {
     if (tab === "home") goHome();
-    // "shop" / "me" have no screens yet — wire these up once those exist.
   };
 
   return (
