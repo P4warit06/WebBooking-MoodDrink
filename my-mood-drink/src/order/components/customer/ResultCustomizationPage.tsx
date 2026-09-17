@@ -38,19 +38,27 @@ export function ResultCustomizationPage({
       <StepDots step={1} />
 
       <div className="px-6 pt-2">
+        {/* ปรับความสูงกล่องการ์ดจาก h-40 เป็น h-48 */}
         <div
-          className="rounded-3xl h-40 flex items-center justify-center mb-4 shadow-inner"
+          className="rounded-3xl h-48 flex items-center justify-center mb-4 shadow-inner overflow-hidden"
           style={{
             background: `linear-gradient(160deg, ${mood.colorLiquid}, ${mood.colorAccent})`,
           }}
         >
-          <span className="text-6xl drop-shadow">🥤</span>
+          {mood.imageUrl ? (
+            <img
+              src={mood.imageUrl}
+              alt={mood.drinkName}
+              className="w-full h-90 object-contain pt-6 px-2 drop-shadow-[0_10px_15px_rgba(0,0,0,0.15)]"
+            />
+          ) : (
+            <span className="text-6xl drop-shadow">{mood.emoji}</span>
+          )}
         </div>
 
         <div className="text-center mb-5">
           <p
-            className="text-xs uppercase tracking-wide"
-            style={{ color: mood.colorAccent }}
+            className="text-xl uppercase tracking-wide text-black"
           >
             เมนูที่ใช่สำหรับคุณ
           </p>
