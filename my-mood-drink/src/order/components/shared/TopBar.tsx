@@ -14,6 +14,7 @@ export function TopBar({ onBack, title }: TopBarProps) {
           className="w-9 h-9 rounded-full bg-white/70 backdrop-blur flex items-center justify-center shadow-sm active:scale-95 transition"
         >
           <ChevronLeft size={20} className="text-neutral-700" />
+          
         </button>
       ) : (
         <div className="w-9 h-9" />

@@ -1,4 +1,6 @@
 export interface Mood {
+  iconUrl: string | undefined;
+  imageUrl: string | undefined;
   id: string;
   emoji: string;
   name: string;
@@ -15,6 +17,7 @@ export interface Addon {
   name: string;
   price: number;
   active: boolean;
+  imageUrl?: string;
 }
 
 export type SweetnessLevel = "50%" | "ปกติ" | "หวานมากพิเศษ";

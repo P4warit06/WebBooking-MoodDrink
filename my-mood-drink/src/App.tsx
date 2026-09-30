@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { HomePage } from "./order/components/customer/HomePage";
 import { MoodSelectionPage } from "./order/components/customer/MoodSelectionPage";
 import { ResultCustomizationPage } from "./order/components/customer/ResultCustomizationPage";
@@ -6,24 +7,20 @@ import { QueueCheckoutPage } from "./order/components/customer/QueueCheckoutPage
 import { ConfirmationPage } from "./order/components/customer/ConfirmationPage";
 import { BottomNav, type NavTab } from "./BottomNav";
 import type { Mood, OrderDraft } from "./order/types";
-import { useMoods } from "./order/hooks/useMood"; // ปรับ path ตามตำแหน่งไฟล์ hook จริงของคุณ
-
+import { AdminQuickLogin } from "./order/components/admin/AdminQuickLogin";
 type Page = "home" | "mood" | "result" | "checkout" | "confirmation";
 
 const LAST_ORDER_KEY = "moodDrink:lastOrderId";
 
 export default function App() {
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const navigate = useNavigate();
   const [page, setPage] = useState<Page>("home");
   const [mood, setMood] = useState<Mood | null>(null);
   const [orderDraft, setOrderDraft] = useState<OrderDraft | null>(null);
   const [orderId, setOrderId] = useState<string | null>(() =>
     localStorage.getItem(LAST_ORDER_KEY)
   );
-
-  // เรียกใช้ Hook เพื่อดึงข้อมูล moods มาทดสอบ
-  const { moods, loading } = useMoods();
-  console.log("⏳ กำลังโหลด:", loading);
-  console.log("🔥 ข้อมูล Moods ที่ดึงมาได้:", moods);
 
   const goHome = () => {
     setPage("home");
@@ -100,8 +97,16 @@ export default function App() {
         </div>
 
         {showBottomNav && (
-          <BottomNav active="home" onNavigate={handleNavigate} />
-        )}
+        <BottomNav
+          active="home"
+          onNavigate={handleNavigate}
+          onAdminClick={() => setAdminModalOpen(true)} // ✅ ส่ง callback
+        />
+      )}
+      <AdminQuickLogin
+        open={adminModalOpen}
+        onClose={() => setAdminModalOpen(false)}
+      />
       </div>
     </div>
   );
