@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 // ถ้ายัังไม่ใช้ Analytics ให้คอมเมนต์หรือลบบรรทัดนี้ออกก่อนได้ครับเพื่อกันเหนียว
 // import { getAnalytics } from "firebase/analytics"; 
 
@@ -17,4 +18,6 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 
-export const db = getFirestore(app);
+export const db = initializeFirestore(app, {
+  ignoreUndefinedProperties: true,
+});

@@ -10,9 +10,6 @@ import {
 import { db } from "../../services/firebase";
 import type { Order, OrderDraft, OrderStatus } from "../types";
 
-// "YYYY-MM-DD" in Asia/Bangkok, NOT the server/browser's local date — a
-// customer ordering near midnight from a different timezone must not get
-// tomorrow's counter.
 function bangkokDateKey(d = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Bangkok",
@@ -63,7 +60,7 @@ export async function createOrder(
       queueNumber: nextQueueNumber,
       customerName: checkout.customerName,
       moodId: draft.mood.id,
-      drinkName: draft.mood.drinkName, // snapshot — see types.ts note
+      drinkName: draft.mood.drinkName, 
       addons: draft.addons,
       sweetnessLevel: draft.sweetnessLevel,
       totalPrice: checkout.finalTotal,
@@ -80,8 +77,6 @@ export async function createOrder(
   return orderRef.id;
 }
 
-// Live status for the customer's own order — this is what makes Page 5
-// update from "pending" to "ready" without any polling or refresh.
 export function useOrderStatus(orderId: string | null) {
   const [order, setOrder] = useState<Order | null>(null);
 
