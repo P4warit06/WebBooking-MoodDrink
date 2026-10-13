@@ -121,10 +121,7 @@ export function QueueCheckoutPage({
           <p className="text-sm font-semibold text-neutral-800 mb-2">
             {mood.drinkName}
           </p>
-          <div className="flex justify-between text-xs text-neutral-500 mb-1">
-            <span>ความหวาน</span>
-            <span>{orderDraft.sweetnessLevel}</span>
-          </div>
+        
           {orderDraft.addons.length > 0 && (
             <div className="flex justify-between text-xs text-neutral-500 mb-1">
               <span>ท็อปปิ้ง</span>

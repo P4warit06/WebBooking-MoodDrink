@@ -1,224 +1,196 @@
-import { useEffect, useState } from "react";
-import { Coffee, Bell, Settings, History as HistoryIcon, CheckCircle2, Plus } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, ChefHat, History as HistoryIcon, Plus, Settings, StickyNote } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useActiveOrders, useTodayOrders, updateOrderStatus } from "../../hooks/useAdminOrders";
 import type { Order } from "../../types";
-import { LiveClock } from "./LiveClock";
+import {
+  ActionButton, CARD, Header, ICON, IconButton, LiveBadge, Notification, QuickActionCard,
+  STATUS, StatusBadge, SystemStatus, getNote, useTick, useToast,
+} from "./ui";
 
-function minutesAgo(ms: number) {
-  const mins = Math.max(0, Math.round((Date.now() - ms) / 60000));
-  return mins === 0 ? "Just now" : `${mins} mins ago`;
-}
+const LATE_AFTER_MIN = 10;
 
-function OrderCard({ order, onMarkReady }: { order: Order; onMarkReady: (id: string) => void }) {
-  const isPreparing = order.status === "pending" || order.status === "making";
-  
-  // Determine card styling based on status to match the image
-  let cardStyle = "bg-white border-neutral-100";
-  let numberColor = "text-violet-600";
-  let badgeStyle = "bg-violet-100 text-violet-700";
-  let badgeText = "NEW";
+const ageMinutes = (ms: number) => Math.max(0, Math.round((Date.now() - ms) / 60000));
+const ageText = (m: number) => (m === 0 ? "Just now" : `${m} mins ago`);
 
-  if (order.status === "making") {
-    cardStyle = "bg-pink-50/50 border-pink-100";
-    numberColor = "text-pink-500";
-    badgeStyle = "bg-pink-100 text-pink-600";
-    badgeText = "PREPARING";
-  } else if (order.status === "ready") {
-    cardStyle = "bg-emerald-50/50 border-emerald-200";
-    numberColor = "text-emerald-600";
-    badgeStyle = "bg-emerald-500 text-white";
-    badgeText = "READY";
-  }
-
+function ProductItem({ order }: { order: Order }) {
+  const hasAddons = !!order.addons?.length;
   return (
-    <div className={`rounded-[2rem] border p-6 shadow-sm flex flex-col gap-3 ${cardStyle}`}>
-      <div className="flex items-start justify-between">
-        <span className={`text-5xl font-extrabold tracking-tighter ${numberColor}`}>
-          #{String(order.queueNumber).padStart(2, "0")}
-        </span>
-        <span className={`text-[10px] font-bold px-3 py-1.5 rounded-full tracking-wider ${badgeStyle}`}>
-          {badgeText}
-        </span>
+    <div className="flex items-center gap-3">
+      <div className="w-12 h-12 shrink-0 rounded-xl bg-orange-100 overflow-hidden">
+        <img
+          src={`https://api.dicebear.com/7.x/shapes/svg?seed=${encodeURIComponent(order.drinkName)}`}
+          alt=""
+          className="w-full h-full object-cover opacity-80"
+        />
       </div>
-      
-      <div className="mt-1">
-        <p className="text-lg font-bold text-neutral-900">K. {order.customerName}</p>
-        <p className="text-xs text-neutral-500 font-medium mt-0.5">
-          {order.orderType === 'dine-in' ? `Table ${order.tableNumber || '12'}` : 'Takeaway'} · {minutesAgo(order.createdAt)}
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-neutral-800 truncate">{order.drinkName}</p>
+        <p className="text-xs text-neutral-600">
+          {hasAddons ? `+ ${order.addons!.map((a) => a.name).join(", ")}` : "No add-ons"}
         </p>
       </div>
-
-      <div className="mt-4 flex flex-col gap-4 border-t border-neutral-100 pt-4">
-        {/* Mocking the drink items with images as per the design */}
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center overflow-hidden">
-             {/* Placeholder for drink image */}
-             <img src={`https://api.dicebear.com/7.x/shapes/svg?seed=${order.drinkName}`} alt="drink" className="w-full h-full object-cover opacity-80" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-neutral-800">{order.drinkName}</p>
-            {order.addons && order.addons.length > 0 && (
-              <p className="text-xs text-neutral-500">+ {order.addons.map((a) => a.name).join(", ")}</p>
-            )}
-            {(!order.addons || order.addons.length === 0) && (
-               <p className="text-xs text-neutral-400">No add-ons</p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {isPreparing && (
-        <button
-          onClick={() => onMarkReady(order.id)}
-          className="mt-4 w-full py-3.5 rounded-2xl bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md shadow-violet-500/20"
-        >
-          <CheckCircle2 size={18} /> พร้อมเสิร์ฟ (Ready to Serve)
-        </button>
-      )}
     </div>
   );
 }
 
+function OrderCard({ order, busy, onAction }: { order: Order; busy: boolean; onAction: (o: Order) => void }) {
+  const s = STATUS[order.status];
+  const mins = ageMinutes(order.createdAt);
+  const late = (order.status === "pending" || order.status === "making") && mins >= LATE_AFTER_MIN;
+  const note = getNote(order);
+  const place =
+    order.orderType === "dine-in" ? (order.tableNumber ? `Table ${order.tableNumber}` : "Dine-in") : "Takeaway";
+
+  const action =
+    order.status === "ready"
+      ? { label: "ส่งมอบแล้ว (Completed)", variant: "success" as const }
+      : order.status === "pending" || order.status === "making"
+        ? { label: "พร้อมเสิร์ฟ (Ready to Serve)", variant: "primary" as const }
+        : null;
+
+  return (
+    <article className={`${CARD.base} p-6 flex flex-col gap-3 ${s.card}`} aria-label={`คิว ${order.queueNumber} ${s.label}`}>
+      <div className="flex items-start justify-between gap-2">
+        <span className={`text-5xl font-extrabold tracking-tighter ${s.number}`}>
+          #{String(order.queueNumber).padStart(2, "0")}
+        </span>
+        <StatusBadge status={order.status} />
+      </div>
+
+      <div>
+        <p className="text-lg font-bold text-neutral-900">K. {order.customerName}</p>
+        <p className="text-xs font-medium mt-0.5 text-neutral-600">
+          {place} ·{" "}
+          <span className={late ? "text-red-600 font-bold" : ""}>
+            {ageText(mins)}
+            {late && " (ช้า)"}
+          </span>
+        </p>
+      </div>
+
+      <div className="mt-2 border-t border-neutral-100 pt-4 flex flex-col gap-3">
+        <ProductItem order={order} />
+        {note && (
+          <p className="flex items-start gap-2 text-xs text-amber-900 bg-amber-50 rounded-xl px-3 py-2">
+            <StickyNote size={ICON.sm} className="mt-0.5 shrink-0" /> {note}
+          </p>
+        )}
+      </div>
+
+      {action && (
+        <ActionButton variant={action.variant} icon={CheckCircle2} block loading={busy} onClick={() => onAction(order)} className="mt-3">
+          {action.label}
+        </ActionButton>
+      )}
+    </article>
+  );
+}
+
+function AnalyticsCard({ avgPrepMinutes, total }: { avgPrepMinutes: number | null; total: number }) {
+  return (
+    <section className={`${CARD.base} ${CARD.brand} p-6 flex flex-col justify-between min-h-[280px]`}>
+      <h2 className="text-lg font-bold">Barista Efficiency</h2>
+      <div className="h-24 w-full mt-2 mb-6" aria-hidden>
+        <svg viewBox="0 0 100 40" className="w-full h-full" preserveAspectRatio="none">
+          <path d="M0,40 L0,30 L20,25 L40,10 L60,20 L80,15 L100,18 L100,40 Z" fill="rgba(255,255,255,0.12)" />
+          <path d="M0,30 L20,25 L40,10 L60,20 L80,15 L100,18" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+      <dl className="flex flex-col gap-3 mt-auto text-sm">
+        <div className="flex items-center justify-between">
+          <dt className="text-violet-100">Avg. Prep Time</dt>
+          <dd className="font-bold">{avgPrepMinutes !== null ? `${avgPrepMinutes} min` : "—"}</dd>
+        </div>
+        <div className="flex items-center justify-between pt-3 border-t border-white/20">
+          <dt className="text-violet-100">Today's Total</dt>
+          <dd className="font-bold">{total} Orders</dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
 export function Dashboard() {
+  const navigate = useNavigate();
   const { orders, loading } = useActiveOrders();
   const todayOrders = useTodayOrders();
+  const { show, toastHost } = useToast();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  useTick(30000); // refresh "x mins ago"
 
-  const handleMarkReady = async (orderId: string) => {
+  const handleAction = async (order: Order) => {
+    const next = order.status === "ready" ? "completed" : "ready";
+    setBusyId(order.id);
     try {
-      await updateOrderStatus(orderId, "ready");
+      await updateOrderStatus(order.id, next);
+      show(next === "ready" ? `คิว #${order.queueNumber} พร้อมเสิร์ฟแล้ว` : `คิว #${order.queueNumber} ส่งมอบเรียบร้อย`);
     } catch (e) {
-      console.error("Failed to mark order ready:", e);
-      alert("อัปเดตสถานะไม่สำเร็จ ลองใหม่อีกครั้ง");
+      console.error("Failed to update order:", e);
+      show("อัปเดตสถานะไม่สำเร็จ ลองใหม่อีกครั้ง", "error");
+    } finally {
+      setBusyId(null);
     }
   };
 
-  // Avg prep time (logic เดิม)
-  const finishedToday = todayOrders.filter((o) => o.status !== "pending");
+  // Only orders that reached ready/completed have a meaningful prep duration
+  const finished = todayOrders.filter((o) => o.status === "ready" || o.status === "completed");
   const avgPrepMinutes =
-    finishedToday.length > 0
-      ? Math.round(
-          finishedToday.reduce((sum, o) => sum + (o.updatedAt - o.createdAt), 0) /
-            finishedToday.length /
-            60000
-        )
+    finished.length > 0
+      ? Math.round(finished.reduce((sum, o) => sum + (o.updatedAt - o.createdAt), 0) / finished.length / 60000)
       : null;
 
-  return (
-    <div className="min-h-screen w-full bg-[#f8f9fc] font-sans">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-pink-50 via-purple-50 to-blue-50 px-8 py-5 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm">
-            <Coffee size={24} className="text-violet-600" />
-          </span>
-          <div>
-            <p className="text-2xl font-bold text-neutral-900 tracking-tight">Mood Drink <span className="font-normal text-neutral-600">Barista</span></p>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="text-[11px] font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-violet-500"></span> Live Updates
-              </span>
-              <span className="text-xs text-neutral-500 font-medium">{orders.length} Orders in Queue</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-6">
-          <div className="text-right">
-            <p className="text-[10px] font-bold text-neutral-400 tracking-wider uppercase mb-0.5">Current Time</p>
-            {/* Using LiveClock but styling it to match */}
-            <div className="text-3xl font-extrabold text-neutral-900 tracking-tight">
-              <LiveClock />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-neutral-600 shadow-sm hover:bg-neutral-50 transition">
-              <Settings size={20} />
-            </button>
-            <button className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-neutral-600 shadow-sm hover:bg-neutral-50 transition">
-              <Bell size={20} />
-            </button>
-          </div>
-        </div>
-      </div>
+  const readyCount = orders.filter((o) => o.status === "ready").length;
 
-      {/* Main Content Area */}
-      <div className="px-8 py-8 max-w-[1600px] mx-auto">
-        {/* Order grid */}
+  return (
+    <div className="min-h-screen w-full bg-[#f8f9fc] font-sans flex flex-col">
+      <Header
+        section="Barista"
+        chips={
+          <>
+            <LiveBadge />
+            <span className="text-xs text-neutral-600 font-medium">{orders.length} Orders in Queue</span>
+          </>
+        }
+        actions={
+          <>
+            <IconButton label="ตั้งค่า" icon={Settings} />
+            <Notification count={readyCount} />
+          </>
+        }
+      />
+
+      <main className="flex-1 px-4 md:px-8 py-8 max-w-[1600px] w-full mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {loading && (
-            <p className="col-span-full text-center text-sm text-neutral-400 py-10">
-              กำลังโหลดออเดอร์...
-            </p>
-          )}
+          {loading && <p className="col-span-full text-center text-sm text-neutral-500 py-10">กำลังโหลดออเดอร์...</p>}
           {!loading && orders.length === 0 && (
-            <p className="col-span-full text-center text-sm text-neutral-400 py-10">
-              ยังไม่มีออเดอร์เข้าคิวตอนนี้
+            <p className="col-span-full text-center text-sm text-neutral-500 py-10 flex flex-col items-center gap-2">
+              <ChefHat size={ICON.xl} className="text-neutral-300" /> ยังไม่มีออเดอร์เข้าคิวตอนนี้
             </p>
           )}
-          
+
           {orders.map((order) => (
-            <OrderCard key={order.id} order={order} onMarkReady={handleMarkReady} />
+            <OrderCard key={order.id} order={order} busy={busyId === order.id} onAction={handleAction} />
           ))}
 
-          {/* Stats Card - Barista Efficiency */}
-          <div className="rounded-[2rem] bg-[#7c3aed] text-white p-6 flex flex-col justify-between shadow-lg shadow-violet-500/20 min-h-[280px]">
-            <p className="text-lg font-bold text-white mb-2">Barista Efficiency</p>
-            
-            {/* Mock Chart Area */}
-            <div className="h-24 w-full relative mt-2 mb-6">
-               <svg viewBox="0 0 100 40" className="w-full h-full preserve-3d" preserveAspectRatio="none">
-                  <path d="M0,40 L0,30 L20,25 L40,10 L60,20 L80,15 L100,18 L100,40 Z" fill="rgba(255,255,255,0.1)" />
-                  <path d="M0,30 L20,25 L40,10 L60,20 L80,15 L100,18" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-               </svg>
-            </div>
-
-            <div className="flex flex-col gap-3 mt-auto">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-violet-200">Avg. Prep Time</span>
-                <span className="font-bold">{avgPrepMinutes !== null ? `${avgPrepMinutes} min` : "—"}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm pt-3 border-t border-white/20">
-                <span className="text-violet-200">Today's Total</span>
-                <span className="font-bold">{todayOrders.length} Orders</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Manual Add Card */}
-          <div className="rounded-[2rem] bg-white border border-neutral-100 p-6 flex flex-col items-center justify-center shadow-sm min-h-[280px] cursor-pointer hover:bg-neutral-50 transition-colors">
-            <div className="w-16 h-16 rounded-full bg-neutral-50 flex items-center justify-center mb-4">
-              <Plus size={32} className="text-neutral-400" />
-            </div>
-            <p className="text-lg font-bold text-neutral-500">Manual Add</p>
-          </div>
-
-          {/* View History Card */}
-          <div className="rounded-[2rem] bg-white border border-neutral-100 p-6 flex flex-col items-center justify-center shadow-sm min-h-[280px] cursor-pointer hover:bg-neutral-50 transition-colors">
-            <div className="w-16 h-16 rounded-full bg-neutral-50 flex items-center justify-center mb-4">
-              <HistoryIcon size={32} className="text-neutral-400" />
-            </div>
-            <p className="text-lg font-bold text-neutral-500">View History</p>
-          </div>
-
+          <AnalyticsCard avgPrepMinutes={avgPrepMinutes} total={todayOrders.length} />
+          <QuickActionCard icon={Plus} label="Manual Add" onClick={() => show("ยังไม่เปิดให้ใช้งานเพิ่มออเดอร์เอง", "error")} />
+          <QuickActionCard icon={HistoryIcon} label="View History" onClick={() => navigate("/admin/queue")} />
         </div>
-      </div>
+      </main>
 
-      {/* Footer */}
-      <div className="px-8 py-5 flex items-center justify-between text-xs text-neutral-400 border-t border-neutral-200 bg-white mt-4">
+      <footer className="px-4 md:px-8 py-5 flex flex-wrap gap-3 items-center justify-between text-xs text-neutral-500 border-t border-neutral-200 bg-white">
         <div className="flex items-center gap-6">
-          <span className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" /> POS Connected
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" /> Printer Online
-          </span>
+          <SystemStatus label="POS Connected" />
+          <SystemStatus label="Printer Online" />
         </div>
         <div className="flex items-center gap-4">
           <span>V2.4.1 Build 290</span>
           <span className="text-neutral-300">|</span>
           <span>Mood Drink Co., Ltd.</span>
         </div>
-      </div>
+      </footer>
+      {toastHost}
     </div>
   );
 }

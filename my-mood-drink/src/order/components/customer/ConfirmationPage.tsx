@@ -72,10 +72,6 @@ export function ConfirmationPage({
             <span>ชื่อ / โต๊ะ</span>
             <span>{order.customerName}</span>
           </div>
-          <div className="flex justify-between text-xs text-neutral-500 mb-1">
-            <span>ความหวาน</span>
-            <span>{order.sweetnessLevel}</span>
-          </div>
           {order.addons.length > 0 && (
             <div className="flex justify-between text-xs text-neutral-500 mb-1">
               <span>ท็อปปิ้ง</span>

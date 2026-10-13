@@ -119,34 +119,7 @@ export function ResultCustomizationPage({
           </div>
         </div>
 
-        {/* ---------- Sweetness selector ---------- */}
-        <p className="text-sm font-semibold text-slate-700 mb-2 px-1 font-[itim]">
-          ความหวาน
-        </p>
-        <div
-          className="flex gap-2 mb-5 p-1.5 rounded-full
-                     bg-white/20 backdrop-blur-2xl
-                     border border-white/50
-                     shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_6px_18px_-10px_rgba(190,120,180,0.3)]"
-        >
-          {SWEETNESS_LEVELS.map((lvl) => {
-            const active = sweetness === lvl;
-            return (
-              <button
-                key={lvl}
-                onClick={() => setSweetness(lvl)}
-                className={`flex-1 py-2.5 rounded-full text-xs font-medium transition-all duration-300
-                  ${
-                    active
-                      ? "bg-gradient-to-br from-pink-400/95 to-rose-400/95 text-white border border-white/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_6px_16px_-4px_rgba(236,72,153,0.55)]"
-                      : "text-slate-600 border border-transparent hover:bg-white/40"
-                  }`}
-              >
-                {lvl}
-              </button>
-            );
-          })}
-        </div>
+  
 
         {/* ---------- Add-ons ---------- */}
         <div className={`${glassPanel} p-4 mb-4`}>
