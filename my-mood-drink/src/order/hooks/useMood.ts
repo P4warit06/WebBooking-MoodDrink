@@ -4,12 +4,12 @@ import { db } from "../../services/firebase";
 import type { Mood } from "../types";
 
 
-export function useMoods() {
+export function useMoods(includeInactive = false) {
   const [moods, setMoods] = useState<Mood[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "moods"), where("active", "==", true));
+    const q = includeInactive ? collection(db, "moods") : query(collection(db, "moods"), where("active", "==", true));
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -22,7 +22,7 @@ export function useMoods() {
       }
     );
     return unsubscribe;
-  }, []);
+  }, [includeInactive]);
 
   return { moods, loading };
 }

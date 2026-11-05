@@ -4,7 +4,8 @@ export interface Mood {
   id: string;
   emoji: string;
   name: string;
-  drinkName: string;
+  drinkname?: string;
+  drinkName?: string;
   description: string;
   basePrice: number;
   colorAccent: string;
@@ -35,15 +36,23 @@ export interface OrderAddon {
   price: number;
 }
 
+export interface OrderItem {
+  moodId: string;
+  imageUrl?: string;
+  drinkname?: string;
+  drinkName?: string;
+  addons: OrderAddon[];
+  sweetnessLevel: SweetnessLevel;
+  price: number;
+}
+
 export interface Order {
   id: string;
   queueNumber: number;
   customerName: string;
-  moodId: string;
-  drinkName: string; // snapshot at order time — survives later menu edits
-  addons: OrderAddon[];
-  sweetnessLevel: SweetnessLevel;
+  items: OrderItem[]; // Changed from single moodId/drinkName
   totalPrice: number;
+  promotionDiscount?: number;
   hasPolaroidDiscount: boolean;
   status: OrderStatus;
   createdAt: number; // millis, converted from Firestore Timestamp
@@ -57,9 +66,16 @@ export interface DailyCounter {
 }
 
 // Local, in-progress state before an order is submitted — never touches Firestore.
-export interface OrderDraft {
+export interface OrderDraftItem {
   mood: Mood;
   addons: OrderAddon[];
   sweetnessLevel: SweetnessLevel;
   total: number;
+}
+
+export interface OrderDraft {
+  items: OrderDraftItem[];
+  subtotal: number;
+  promotionDiscount: number;
+  grandTotal: number;
 }

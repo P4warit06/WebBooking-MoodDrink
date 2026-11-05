@@ -1,30 +1,30 @@
-import { useState } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { HomePage } from "./order/components/customer/HomePage";
 import { MoodSelectionPage } from "./order/components/customer/MoodSelectionPage";
 import { ResultCustomizationPage } from "./order/components/customer/ResultCustomizationPage";
 import { QueueCheckoutPage } from "./order/components/customer/QueueCheckoutPage";
 import { ConfirmationPage } from "./order/components/customer/ConfirmationPage";
+import { FeedbackPage } from "./order/components/customer/FeedbackPage";
 import { BottomNav, type NavTab } from "./BottomNav";
 import type { Mood, OrderDraft } from "./order/types";
-import { AdminQuickLogin } from "./order/components/admin/AdminQuickLogin";
-type Page = "home" | "mood" | "result" | "checkout" | "confirmation";
+type Page = "home" | "mood" | "result" | "checkout" | "confirmation" | "feedback";
 
 const LAST_ORDER_KEY = "moodDrink:lastOrderId";
 
 export default function App() {
-  const [adminModalOpen, setAdminModalOpen] = useState(false);
-  const navigate = useNavigate();
   const [page, setPage] = useState<Page>("home");
-  const [mood, setMood] = useState<Mood | null>(null);
+  const [selectedMoods, setSelectedMoods] = useState<Mood[]>([]);
   const [orderDraft, setOrderDraft] = useState<OrderDraft | null>(null);
   const [orderId, setOrderId] = useState<string | null>(() =>
     localStorage.getItem(LAST_ORDER_KEY)
   );
 
+  useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" }); }, [page]);
+
   const goHome = () => {
     setPage("home");
-    setMood(null);
+    setSelectedMoods([]);
     setOrderDraft(null);
   };
 
@@ -42,71 +42,88 @@ export default function App() {
 
   return (
     <div
-      className="min-h-screen w-full"
+      className="min-h-screen w-full transition-colors duration-500 animate-gradient-bg"
       style={{
         background:
-          "linear-gradient(165deg, #f6b9d2 0%, #dcb2ec 45%, #b6c6f3 100%)",
+          "linear-gradient(135deg, #fff8f2, #fcebed, #f3edf8)",
+        backgroundSize: "400% 400%",
       }}
     >
-      <div className="mx-auto w-full max-w-xl min-h-screen flex flex-col relative">
+      <div className={`mx-auto w-full ${page === "feedback" ? "max-w-2xl" : "max-w-5xl"} min-h-screen flex flex-col relative`}>
         <div className={`flex-1 flex flex-col ${showBottomNav ? "pb-24" : ""}`}>
-          {page === "home" && (
-            <HomePage
-              onPickMood={() => setPage("mood")}
-              onBookQueue={() => setPage("mood")}
-            />
-          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={page}
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 flex flex-col"
+            >
+              {page === "home" && (
+                <HomePage
+                  onPickMood={() => setPage("mood")}
+                  onBookQueue={() => setPage("mood")}
+                  onFeedback={() => setPage("feedback")}
+                />
+              )}
 
-          {page === "mood" && (
-            <MoodSelectionPage
-              onBack={goHome}
-              onSelectMood={(m) => {
-                setMood(m);
-                setPage("result");
-              }}
-            />
-          )}
+              {page === "mood" && (
+                <MoodSelectionPage
+                  onBack={goHome}
+                  onSelectMoods={(moods) => {
+                    setOrderDraft(null);
+                    setSelectedMoods(moods);
+                    setPage("result");
+                  }}
+                />
+              )}
 
-          {page === "result" && mood && (
-            <ResultCustomizationPage
-              mood={mood}
-              onBack={() => setPage("mood")}
-              onConfirm={(draft) => {
-                setOrderDraft(draft);
-                setPage("checkout");
-              }}
-            />
-          )}
+              {page === "result" && selectedMoods.length > 0 && (
+                <ResultCustomizationPage
+                  moods={selectedMoods}
+                  initialDraft={orderDraft}
+                  onBack={() => setPage("mood")}
+                  onConfirm={(draft) => {
+                    setOrderDraft(draft);
+                    setPage("checkout");
+                  }}
+                />
+              )}
 
-          {page === "checkout" && mood && orderDraft && (
-            <QueueCheckoutPage
-              mood={mood}
-              orderDraft={orderDraft}
-              onBack={() => setPage("result")}
-              onSubmitted={handleSubmitted}
-            />
-          )}
+              {page === "checkout" && selectedMoods.length > 0 && orderDraft && (
+                <QueueCheckoutPage
+                  moods={selectedMoods}
+                  orderDraft={orderDraft}
+                  onBack={() => setPage("result")}
+                  onSubmitted={handleSubmitted}
+                />
+              )}
 
-          {page === "confirmation" && orderId && (
-            <ConfirmationPage
-              orderId={orderId}
-              onAddAnother={() => setPage("mood")}
-              onHome={goHome}
-            />
-          )}
+              {page === "confirmation" && orderId && (
+                <ConfirmationPage
+                  orderId={orderId}
+                  onAddAnother={() => setPage("mood")}
+                  onHome={goHome}
+                  onFeedback={() => setPage("feedback")}
+                />
+              )}
+
+              {page === "feedback" && (
+                <FeedbackPage
+                  onBack={goHome}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {showBottomNav && (
-        <BottomNav
-          active="home"
-          onNavigate={handleNavigate}
-          onAdminClick={() => setAdminModalOpen(true)} // ✅ ส่ง callback
-        />
-      )}
-      <AdminQuickLogin
-        open={adminModalOpen}
-        onClose={() => setAdminModalOpen(false)}
-      />
+          <BottomNav
+            active="home"
+            onNavigate={handleNavigate}
+          />
+        )}
       </div>
     </div>
   );

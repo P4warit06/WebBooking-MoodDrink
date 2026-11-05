@@ -1,16 +1,17 @@
 import { NavLink, Routes, Route, Navigate , useNavigate} from "react-router-dom";
 import { LayoutGrid, ListOrdered, LogOut , Home } from "lucide-react";
+import { signOut } from "firebase/auth";
+import { auth } from "../../../services/firebase";
 import { AdminGate } from "./AdminGate";
 import { Dashboard } from "./Dashboard";
 import { QueueManagement } from "./QueueManagement";
 
-const SESSION_KEY = "moodDrink:adminUnlocked";
 
 function AdminShell() {
     const navigate = useNavigate() ; 
-    const handleLogout = () => {
-        localStorage.removeItem("moodDrink:adminUnlocked"); // ✅ เปลี่ยนจาก sessionStorage
-        window.location.reload();
+    const handleLogout = async () => {
+        await signOut(auth);
+        navigate("/");
       };
 
   const tabClass = ({ isActive }: { isActive: boolean }) =>
@@ -21,8 +22,8 @@ function AdminShell() {
     }`;
 
   return (
-    <div className="min-h-screen w-full bg-neutral-50">
-      <div className="flex items-center justify-between px-4 pt-4">
+    <div className="admin-shell min-h-screen w-full bg-neutral-50">
+      <div className="admin-nav flex flex-wrap gap-2 items-center justify-between px-4 pt-4">
         <div className="flex gap-1">
           <NavLink to="/admin/dashboard" className={tabClass}>
             <LayoutGrid size={14} /> Kitchen Display

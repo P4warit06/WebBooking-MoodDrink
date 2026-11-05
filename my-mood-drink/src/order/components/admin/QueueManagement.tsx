@@ -1,19 +1,21 @@
 import { useMemo, useState } from "react";
-import { Search, RotateCcw, Eraser, PhoneCall, Coffee, Bell, Calendar, Utensils, ShoppingBag } from "lucide-react";
+import { Search, RotateCcw, Eraser, Coffee, Bell, Calendar, ShoppingBag, LoaderCircle } from "lucide-react";
 import { useTodayOrders, updateOrderStatus, resetDay, clearCompletedOrders } from "../../hooks/useAdminOrders";
 import type { Order } from "../../types";
 import { motion, AnimatePresence } from "framer-motion";
+import { useMoods } from "../../hooks/useMood";
+import { OrderDetails } from "./OrderDetails";
 
 const STATUS_LABEL: Record<string, string> = {
-    pending: "PENDING",
-    making: "PREPARING",
-    ready: "READY",
-    completed: "COMPLETED",
-    cancelled: "CANCELLED",
+    pending: "รอจัดเตรียม",
+    making: "กำลังทำ",
+    ready: "พร้อมเสิร์ฟ",
+    completed: "รับแล้ว",
+    cancelled: "ยกเลิก",
 };
 
 const STATUS_STYLE: Record<string, string> = {
-    pending: "bg-neutral-100 text-neutral-600",
+    pending: "bg-violet-100 text-violet-800",
     making: "bg-amber-100 text-amber-700",
     ready: "bg-emerald-100 text-emerald-700",
     completed: "bg-neutral-100 text-neutral-400",
@@ -29,7 +31,9 @@ function formatDate(ms: number) {
 }
 
 export function QueueManagement() {
-    const orders = useTodayOrders();
+    const { orders, loading, error } = useTodayOrders();
+    const { moods } = useMoods(true);
+    const [busyId, setBusyId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
     const [busy, setBusy] = useState(false);
 
@@ -38,7 +42,7 @@ export function QueueManagement() {
     const completed = orders.filter((o) => o.status === "completed");
 
     const currentlyServing = ready[0] ?? null;
-    const nextInQueue = pending[0] ?? null;
+    const nextInQueue = pending.find((o) => o.status === "pending") ?? null;
 
     const filtered = useMemo(() => {
         if (!search.trim()) return orders;
@@ -49,20 +53,26 @@ export function QueueManagement() {
     }, [orders, search]);
 
     const handleCallNext = async (order: Order) => {
+        setBusyId(order.id);
         try {
             await updateOrderStatus(order.id, "making");
         } catch (e) {
             console.error(e);
             alert("อัปเดตไม่สำเร็จ ลองใหม่อีกครั้ง");
+        } finally {
+            setBusyId(null);
         }
     };
 
     const handlePickUp = async (order: Order) => {
+        setBusyId(order.id);
         try {
             await updateOrderStatus(order.id, "completed");
         } catch (e) {
             console.error(e);
             alert("อัปเดตไม่สำเร็จ ลองใหม่อีกครั้ง");
+        } finally {
+            setBusyId(null);
         }
     };
 
@@ -123,6 +133,8 @@ export function QueueManagement() {
                 </div>
             </div>
 
+            {loading && <p role="status" className="flex items-center gap-2 text-slate-500 mb-5"><LoaderCircle size={18} className="animate-spin" /> กำลังโหลดข้อมูลคิว...</p>}
+            {error && <p role="alert" className="rounded-2xl bg-red-50 text-red-700 p-4 mb-5">{error}</p>}
             {/* Currently serving / next up */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 {/* Currently Serving Card */}
@@ -136,7 +148,7 @@ export function QueueManagement() {
                                 </p>
                                 <div className="flex items-center gap-2 mt-6 bg-white/20 px-4 py-2 rounded-full w-fit backdrop-blur-sm">
                                     <Bell size={16} className="text-white" />
-                                    <span className="text-sm font-medium">Customer Notified</span>
+                                    <span className="text-sm font-medium">พร้อมรับเครื่องดื่ม</span>
                                 </div>
                             </div>
                             <div className="text-right flex flex-col items-end">
@@ -145,7 +157,7 @@ export function QueueManagement() {
                                 </div>
                                 <p className="text-xl font-bold">K. {currentlyServing.customerName}</p>
                                 <p className="text-sm text-emerald-100 mt-1">
-                                    {currentlyServing.orderType === 'dine-in' ? 'Table 08' : 'Takeaway'}
+                                    {currentlyServing.items?.length || 0} รายการ
                                 </p>
                             </div>
                         </div>
@@ -164,21 +176,22 @@ export function QueueManagement() {
                                     #{String(nextInQueue.queueNumber).padStart(3, "0")}
                                 </p>
                                 <div className="mt-4 bg-violet-50 text-violet-700 px-3 py-1.5 rounded-lg w-fit text-xs font-bold">
-                                    ETA: 4 mins
+                                    กำลังรอจัดเตรียม
                                 </div>
                             </div>
                             <div className="text-right flex flex-col items-end gap-4">
                                 <div>
                                     <p className="text-lg font-bold text-neutral-800">K. {nextInQueue.customerName}</p>
                                     <p className="text-sm text-neutral-500 mt-0.5">
-                                        {nextInQueue.orderType === 'dine-in' ? 'Dine-in' : 'Takeaway'}
+                                        {nextInQueue.items?.length || 0} รายการ
                                     </p>
                                 </div>
                                 <button
                                     onClick={() => handleCallNext(nextInQueue)}
+                                    disabled={busyId !== null}
                                     className="flex items-center gap-2 text-sm font-bold bg-[#8b5cf6] hover:bg-violet-700 text-white px-6 py-3 rounded-xl shadow-md shadow-violet-500/30 active:scale-[0.98] transition-all"
                                 >
-                                    Call Next
+                                    {busyId === nextInQueue.id ? <><LoaderCircle size={16} className="animate-spin" /> กำลังอัปเดต...</> : "เริ่มจัดเตรียม"}
                                 </button>
                             </div>
                         </div>
@@ -206,15 +219,15 @@ export function QueueManagement() {
 
                     {/* Table Header */}
                     <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-3 text-[11px] font-bold text-neutral-400 tracking-wider uppercase border-b border-neutral-100 mb-2">
-                        <div className="col-span-2">Queue #</div>
+                        <div className="md:col-span-2">Queue #</div>
                         <div className="col-span-4">Customer</div>
-                        <div className="col-span-2">Status</div>
-                        <div className="col-span-2">Time Ordered</div>
+                        <div className="md:col-span-2">Status</div>
+                        <div className="md:col-span-2">Time Ordered</div>
                         <div className="col-span-2 text-right">Action</div>
                     </div>
 
                     <div className="flex flex-col max-h-[400px] overflow-y-auto pr-2">
-                        {filtered.length === 0 && (
+                        {!loading && !error && filtered.length === 0 && (
                             <p className="text-center text-sm text-neutral-400 py-12">ไม่พบออเดอร์</p>
                         )}
                         <AnimatePresence initial={false}>
@@ -228,48 +241,45 @@ export function QueueManagement() {
                                     transition={{ duration: 0.2 }}
                                     className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center py-5 px-4 border-b border-neutral-50 hover:bg-neutral-50/50 transition-colors rounded-xl"
                                 >
-                                    <div className="col-span-2">
+                                    <div className="md:col-span-2">
                                         <span className="text-xl font-bold text-neutral-800 tracking-tight">
                                             #{String(o.queueNumber).padStart(3, "0")}
                                         </span>
                                     </div>
                                     
-                                    <div className="col-span-4 flex flex-col">
+                                    <div className="md:col-span-4 flex flex-col">
                                         <span className="font-bold text-neutral-800 text-sm">K. {o.customerName}</span>
                                         <span className="text-xs text-neutral-500 mt-1 flex items-center gap-1.5">
-                                            {o.orderType === 'dine-in' ? <Utensils size={12}/> : <ShoppingBag size={12}/>}
-                                            {o.items?.length || 1} Items · {o.orderType === 'dine-in' ? 'Dine-in' : 'Takeaway'}
+                                            <ShoppingBag size={12}/>
+                                            {o.items?.length || 0} รายการ
                                         </span>
                                     </div>
 
-                                    <div className="col-span-2">
+                                    <div className="md:col-span-2">
                                         <span className={`px-3 py-1.5 rounded-full text-[10px] font-bold tracking-wide ${STATUS_STYLE[o.status]}`}>
                                             {STATUS_LABEL[o.status]}
                                         </span>
                                     </div>
 
-                                    <div className="col-span-2 text-sm text-neutral-600 font-medium">
+                                    <div className="md:col-span-2 text-sm text-neutral-600 font-medium">
                                         {formatClock(o.createdAt)}
                                     </div>
 
-                                    <div className="col-span-2 flex justify-end">
+                                    <div className="md:col-span-2 flex justify-end">
                                         {o.status === "ready" ? (
                                             <button
                                                 onClick={() => handlePickUp(o)}
+                                                disabled={busyId !== null}
                                                 className="px-4 py-2 rounded-xl bg-emerald-50 text-emerald-600 text-xs font-bold hover:bg-emerald-100 transition-colors"
                                             >
-                                                Pick Up
+                                                {busyId === o.id ? <span className="flex items-center gap-1"><LoaderCircle size={14} className="animate-spin" /> กำลังอัปเดต...</span> : "รับแล้ว"}
                                             </button>
-                                        ) : (
-                                            <button className="text-neutral-400 hover:text-neutral-600 p-2">
-                                                <svg width="4" height="16" viewBox="0 0 4 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <circle cx="2" cy="2" r="2" fill="currentColor"/>
-                                                    <circle cx="2" cy="8" r="2" fill="currentColor"/>
-                                                    <circle cx="2" cy="14" r="2" fill="currentColor"/>
-                                                </svg>
-                                            </button>
-                                        )}
+                                        ) : null}
                                     </div>
+                                    <details className="md:col-span-12 bg-slate-50 rounded-2xl p-3">
+                                        <summary className="cursor-pointer text-sm font-semibold text-violet-700">ดูรายละเอียดเครื่องดื่ม</summary>
+                                        <div className="mt-3"><OrderDetails order={o} moods={moods} /></div>
+                                    </details>
                                 </motion.div>
                             ))}
                         </AnimatePresence>
@@ -294,18 +304,18 @@ export function QueueManagement() {
 
                     <div className="flex flex-col gap-3">
                         <button
-                            disabled={busy}
+                            disabled={busy || busyId !== null}
                             onClick={handleResetQueue}
                             className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-[#1e1e2d] text-white text-sm font-bold disabled:opacity-40 hover:bg-neutral-800 active:scale-[0.98] transition-all shadow-md"
                         >
-                            <RotateCcw size={18} /> Reset Queue
+                            {busy ? <LoaderCircle size={18} className="animate-spin" /> : <RotateCcw size={18} />} {busy ? "กำลังดำเนินการ..." : "Reset Queue"}
                         </button>
                         <button
-                            disabled={busy || completed.length === 0}
+                            disabled={busy || busyId !== null || completed.length === 0}
                             onClick={handleClearCompleted}
                             className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-white border-2 border-neutral-100 text-neutral-700 text-sm font-bold disabled:opacity-40 hover:bg-neutral-50 active:scale-[0.98] transition-all"
                         >
-                            <Eraser size={18} /> Clear Completed
+                            {busy ? <LoaderCircle size={18} className="animate-spin" /> : <Eraser size={18} />} {busy ? "กำลังดำเนินการ..." : "Clear Completed"}
                         </button>
                     </div>
                 </div>

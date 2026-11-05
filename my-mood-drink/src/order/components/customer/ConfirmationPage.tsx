@@ -1,109 +1,55 @@
-import { Plus } from "lucide-react";
-import { TopBar } from "../shared/TopBar";
+import { Check, Clock3, Home, LoaderCircle, MessageCircleHeart, Plus, ReceiptText } from "lucide-react";
 import { useOrderStatus } from "../../hooks/useOrder";
+import { useMoods } from "../../hooks/useMood";
+import type { Mood, Order } from "../../types";
+import { OrderFlowHeader } from "../shared/OrderFlowHeader";
+import { OrderItems } from "../shared/OrderItems";
+import { OrderTotals } from "../shared/OrderTotals";
 
 interface ConfirmationPageProps {
   orderId: string;
   onAddAnother: () => void;
   onHome: () => void;
+  onFeedback: () => void;
 }
 
-const statusCopy: Record<string, string> = {
-  pending: "รับออเดอร์แล้ว กำลังเข้าคิว",
-  making: "กำลังเตรียมเครื่องดื่มให้คุณ",
-  ready: "พร้อมเสิร์ฟแล้ว! มารับที่เคาน์เตอร์ได้เลย 🎉",
-  completed: "รับเครื่องดื่มเรียบร้อยแล้ว ขอบคุณค่ะ",
+const statuses = {
+  pending: { title: "รับออเดอร์ของคุณแล้ว", text: "กำลังรอคิวจัดเตรียม แก้วโปรดใกล้เข้ามาแล้ว", step: 1 },
+  making: { title: "กำลังทำแก้วโปรดของคุณ", text: "บาริสต้ากำลังเติมความอร่อยให้ทุกแก้ว", step: 2 },
+  ready: { title: "เครื่องดื่มพร้อมแล้ว!", text: "แสดงหมายเลขคิวนี้ที่เคาน์เตอร์เพื่อรับเครื่องดื่ม", step: 3 },
+  completed: { title: "ส่งมอบความสดใสแล้ว", text: "ขอบคุณที่ให้ Mood Drink เป็นส่วนหนึ่งของวันนี้", step: 3 },
+  cancelled: { title: "ออเดอร์ถูกยกเลิก", text: "ติดต่อพนักงานหากต้องการสอบถามเพิ่มเติม", step: 0 },
 };
 
-export function ConfirmationPage({
-  orderId,
-  onAddAnother,
-  onHome,
-}: ConfirmationPageProps) {
-  // Live-updates the instant the barista taps "ready" on the admin
-  // dashboard — no polling, no refresh button needed on this screen.
+export function ConfirmationPage({ orderId, ...actions }: ConfirmationPageProps) {
   const order = useOrderStatus(orderId);
+  const { moods } = useMoods(true);
+  if (!order) return <main className="clay-order-page"><OrderFlowHeader step={4} /><div role="status" className="order-clay-card order-loading"><LoaderCircle className="animate-spin" size={28} /> กำลังโหลดสถานะคิว...</div></main>;
+  return <OrderConfirmation order={order} moods={moods} {...actions} />;
+}
 
-  if (!order) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-sm text-neutral-400">กำลังโหลดสถานะคิว...</p>
-      </div>
-    );
-  }
-
-  const isReady = order.status === "ready" || order.status === "completed";
-
-  return (
-    <div className="flex-1 flex flex-col">
-      <TopBar title="สถานะคิวของคุณ" />
-
-      <div className="px-6 pt-4 text-center">
-        <p className="text-xs text-neutral-500 mb-1">คิวของคุณ</p>
-        <p className="text-6xl font-bold text-neutral-800">
-          #{order.queueNumber}
-        </p>
-      </div>
-
-      <div className="px-6 pt-6">
-        <div
-          className={`rounded-2xl p-5 text-center transition-colors ${
-            isReady
-              ? "bg-emerald-50 border border-emerald-300"
-              : "bg-neutral-50 border border-neutral-200"
-          }`}
-        >
-          <p
-            className={`text-sm font-medium ${
-              isReady ? "text-emerald-700" : "text-neutral-700"
-            }`}
-          >
-            {statusCopy[order.status] ?? order.status}
-          </p>
-        </div>
-      </div>
-
-      <div className="px-6 pt-6 flex-1 overflow-y-auto">
-        <div className="rounded-2xl bg-white border border-neutral-200 p-4">
-          <p className="text-sm font-semibold text-neutral-800 mb-2">
-            {order.drinkName}
-          </p>
-          <div className="flex justify-between text-xs text-neutral-500 mb-1">
-            <span>ชื่อ / โต๊ะ</span>
-            <span>{order.customerName}</span>
-          </div>
-          <div className="flex justify-between text-xs text-neutral-500 mb-1">
-            <span>ความหวาน</span>
-            <span>{order.sweetnessLevel}</span>
-          </div>
-          {order.addons.length > 0 && (
-            <div className="flex justify-between text-xs text-neutral-500 mb-1">
-              <span>ท็อปปิ้ง</span>
-              <span>{order.addons.map((a) => a.name).join(", ")}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-sm font-semibold text-neutral-800 mt-2 pt-2 border-t border-neutral-200">
-            <span>ยอดรวม</span>
-            <span>{order.totalPrice} บาท</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-6 pb-8 pt-2 flex flex-col gap-2">
-        <button
-          onClick={onAddAnother}
-          className="w-full py-3.5 rounded-2xl bg-white border border-neutral-200 text-neutral-700 text-sm font-medium flex items-center justify-center gap-2 active:scale-[0.98] transition"
-        >
-          <Plus size={16} />
-          สั่งแก้วเพิ่มให้เพื่อน
-        </button>
-        <button
-          onClick={onHome}
-          className="w-full py-3 text-xs text-neutral-400"
-        >
-          กลับหน้าหลัก
-        </button>
-      </div>
+export function OrderConfirmation({ order, moods, onAddAnother, onHome, onFeedback }: {
+  order: Order; moods: Mood[];
+} & Omit<ConfirmationPageProps, "orderId">) {
+  const status = statuses[order.status] || statuses.pending;
+  const ready = order.status === "ready" || order.status === "completed";
+  return <main className="clay-order-page">
+    <OrderFlowHeader step={4} />
+    <div className="confirmation-layout">
+      <section className={`order-clay-card queue-ticket ${ready ? "is-ready" : ""} ${order.status === "cancelled" ? "is-cancelled" : ""}`}>
+        <span className="eyebrow">A HAPPY SIP IS ON THE WAY</span><h1>คิวของคุณ</h1>
+        <div className="queue-number">#{String(order.queueNumber).padStart(2, "0")}</div>
+        <p className="queue-owner">คุณ {order.customerName || "ลูกค้า"} · {order.items?.length || 0} แก้ว</p>
+        <div className="queue-status" role="status" aria-live="polite"><span className="queue-status-icon">{ready ? <Check size={24} /> : <Clock3 size={24} />}</span><h2>{status.title}</h2><p>{status.text}</p></div>
+        {order.status !== "cancelled" && <ol className="queue-progress" aria-label="สถานะออเดอร์">{["รับออเดอร์", "กำลังทำ", "พร้อมรับ"].map((label, index) => <li className={status.step >= index + 1 ? "done" : ""} key={label}><span>{status.step > index + 1 || ready ? <Check size={13} /> : index + 1}</span>{label}</li>)}</ol>}
+      </section>
+      <section className="order-clay-card confirmation-receipt">
+        <div className="clay-section-heading"><span className="clay-section-icon"><ReceiptText size={21} /></span><div><h2>สรุปแก้วโปรด</h2><p>รายการที่ส่งให้บาร์เรียบร้อยแล้ว</p></div></div>
+        {order.items?.length ? <OrderItems items={order.items} moods={moods} /> : <p className="order-footnote">ไม่มีรายละเอียดเครื่องดื่ม</p>}
+        <OrderTotals items={order.items || []} total={order.totalPrice} promotionDiscount={order.promotionDiscount} />
+      </section>
     </div>
-  );
+    <div className="confirmation-actions"><button className="clay-button secondary" onClick={onAddAnother}><Plus size={19} /> สั่งแก้วเพิ่มให้เพื่อน</button><button className="clay-button primary" onClick={onFeedback}><MessageCircleHeart size={19} /> บอกความรู้สึกกับเรา</button></div>
+    <button className="order-home-link" onClick={onHome}><Home size={15} /> กลับหน้าหลัก</button>
+  </main>;
 }

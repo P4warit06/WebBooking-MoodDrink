@@ -1,76 +1,95 @@
-import { useState, type ReactNode } from "react";
-import { Lock, LogOut } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { LockKeyhole, LogIn, ShieldAlert, LoaderCircle } from "lucide-react";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+  type User,
+} from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../../../services/firebase";
 
-const STORAGE_KEY = "moodDrink:adminUnlocked";
+type GateState = "checking" | "signed-out" | "checking-role" | "denied" | "allowed";
+type StaffRole = "staff" | "admin";
+
+async function getStaffRole(user: User): Promise<StaffRole | null> {
+  const profile = await getDoc(doc(db, "users", user.uid));
+  const role = profile.data()?.role;
+  return role === "staff" || role === "admin" ? role : null;
+}
 
 export function AdminGate({ children }: { children: ReactNode }) {
-  const [unlocked, setUnlocked] = useState(
-    () => localStorage.getItem(STORAGE_KEY) === "true"
-  );
-  const [code, setCode] = useState("");
-  const [error, setError] = useState(false);
+  const [state, setState] = useState<GateState>("checking");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const correct =
-      import.meta.env.VITE_ADMIN_PASSCODE ||
-      (import.meta.env.DEV ? "1234" : undefined);
-
-    if (!correct) {
-      console.error("VITE_ADMIN_PASSCODE is not set in .env");
-      setError(true);
+  useEffect(() => onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      setState((current) => current === "denied" ? "denied" : "signed-out");
       return;
     }
 
-    if (code === correct) {
-      localStorage.setItem(STORAGE_KEY, "true"); // ✅ เปลี่ยน
-      setUnlocked(true);
-      setError(false);
-    } else {
-      setError(true);
+    setState("checking-role");
+    try {
+      const role = await getStaffRole(user);
+      if (role) {
+        setState("allowed");
+      } else {
+        await signOut(auth);
+        setState("denied");
+      }
+    } catch (cause) {
+      console.error("Unable to check staff role:", cause);
+      await signOut(auth);
+      setError("ตรวจสอบสิทธิ์พนักงานไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+      setState("signed-out");
+    }
+  }), []);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), password);
+    } catch (cause) {
+      console.error("Staff sign-in failed:", cause);
+      setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  if (unlocked) return <>{children}</>;
+  if (state === "allowed") return <>{children}</>;
 
+  const checking = state === "checking" || state === "checking-role";
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-neutral-900 px-6">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-xs bg-neutral-800 rounded-3xl p-6 flex flex-col items-center gap-4"
-      >
-        <span className="w-12 h-12 rounded-full bg-neutral-700 flex items-center justify-center">
-          <Lock size={20} className="text-neutral-300" />
+    <main className="staff-gate">
+      <section className="staff-gate-card" aria-busy={checking}>
+        <span className="staff-gate-mark">
+          {checking ? <LoaderCircle className="animate-spin" size={25} /> : state === "denied" ? <ShieldAlert size={25} /> : <LockKeyhole size={25} />}
         </span>
-        <p className="text-sm text-neutral-300 font-medium">
-          รหัสผ่านสำหรับพนักงาน
+        <p className="staff-gate-eyebrow">MOOD DRINK · STAFF PORTAL</p>
+        <h1>{checking ? "กำลังตรวจสอบสิทธิ์" : state === "denied" ? "บัญชีนี้ไม่มีสิทธิ์พนักงาน" : "เข้าสู่ระบบพนักงาน"}</h1>
+        <p className="staff-gate-copy">
+          {checking ? "โปรดรอสักครู่" : state === "denied" ? "ติดต่อผู้ดูแลระบบเพื่อเพิ่ม role staff หรือ admin ให้บัญชีนี้" : "ใช้บัญชีพนักงานที่ได้รับอนุญาตเท่านั้น"}
         </p>
-        <input
-          type="password"
-          inputMode="numeric"
-          autoFocus
-          value={code}
-          onChange={(e) => {
-            setCode(e.target.value);
-            setError(false);
-          }}
-          className={`w-full text-center tracking-[0.5em] text-lg py-3 rounded-xl bg-neutral-900 text-white outline-none border ${
-            error ? "border-red-500" : "border-neutral-700"
-          }`}
-          placeholder="••••"
-        />
-        {error && (
-          <p className="text-xs text-red-400 -mt-2">
-            รหัสผ่านไม่ถูกต้อง ลองใหม่อีกครั้ง
-          </p>
+        {!checking && state !== "denied" && (
+          <form onSubmit={handleSubmit} className="staff-login-form">
+            <label htmlFor="staff-email">อีเมลพนักงาน</label>
+            <input id="staff-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="staff@mooddrink.com" required disabled={submitting} />
+            <label htmlFor="staff-password">รหัสผ่าน</label>
+            <input id="staff-password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="รหัสผ่าน" required disabled={submitting} />
+            {error && <p role="alert" className="staff-login-error">{error}</p>}
+            <button type="submit" disabled={submitting}>
+              {submitting ? <><LoaderCircle className="animate-spin" size={18} /> กำลังเข้าสู่ระบบ...</> : <><LogIn size={18} /> เข้าสู่ Staff Portal</>}
+            </button>
+          </form>
         )}
-        <button
-          type="submit"
-          className="w-full py-3 rounded-xl bg-white text-neutral-900 text-sm font-semibold active:scale-[0.98] transition"
-        >
-          เข้าสู่ระบบ
-        </button>
-      </form>
-    </div>
+        {state === "denied" && <button type="button" className="staff-gate-back" onClick={() => setState("signed-out")}>กลับไปเข้าสู่ระบบอีกครั้ง</button>}
+      </section>
+    </main>
   );
 }

@@ -1,0 +1,60 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function staff() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ["staff", "admin"];
+    }
+
+    function admin() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    // Role documents are created by an administrator in the Firebase Console
+    // or trusted server code. The browser may only read its own role.
+    match /users/{userId} {
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list, create, update, delete: if false;
+    }
+
+    match /moods/{moodId} {
+      allow read: if true;
+      allow write: if admin();
+    }
+
+    match /addons/{addonId} {
+      allow read: if true;
+      allow write: if admin();
+    }
+
+    match /feedback/{feedbackId} {
+      allow create: if true;
+      allow read, update, delete: if staff();
+    }
+
+    // Customers submit an order and can retrieve the single order ID stored
+    // on their device. Only staff can list, update, or delete the queue.
+    match /orders/{orderId} {
+      allow create: if request.resource.data.status == "pending";
+      allow get: if true;
+      allow list, update, delete: if staff();
+    }
+
+    // Required by the public order transaction that allocates queue numbers.
+    // The dashboard never relies on this collection for authorization.
+    match /dailyCounters/{counterId} {
+      allow get, create, update: if true;
+      allow delete: if staff();
+    }
+
+    match /orderHistory/{orderId} {
+      allow read, write: if staff();
+    }
+  }
+}

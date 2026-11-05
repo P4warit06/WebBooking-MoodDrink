@@ -9,6 +9,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import type { Order, OrderDraft, OrderStatus } from "../types";
+import { localMenuPhoto, moodDrinkName } from "../utils/menu";
 
 function bangkokDateKey(d = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -52,6 +53,15 @@ export async function createOrder(
       { merge: true }
     );
 
+    const orderItems = draft.items.map((item) => ({
+      moodId: item.mood.id,
+      drinkname: moodDrinkName(item.mood),
+      imageUrl: item.mood.imageUrl || localMenuPhoto(moodDrinkName(item.mood)),
+      addons: item.addons,
+      sweetnessLevel: item.sweetnessLevel,
+      price: item.total,
+    }));
+
     const order: Omit<Order, "id" | "createdAt" | "updatedAt" | "servedAt"> & {
       createdAt: unknown;
       updatedAt: unknown;
@@ -59,11 +69,9 @@ export async function createOrder(
     } = {
       queueNumber: nextQueueNumber,
       customerName: checkout.customerName,
-      moodId: draft.mood.id,
-      drinkName: draft.mood.drinkName, 
-      addons: draft.addons,
-      sweetnessLevel: draft.sweetnessLevel,
+      items: orderItems,
       totalPrice: checkout.finalTotal,
+      promotionDiscount: draft.promotionDiscount,
       hasPolaroidDiscount: checkout.hasPolaroidDiscount,
       status: "pending",
       createdAt: serverTimestamp(),

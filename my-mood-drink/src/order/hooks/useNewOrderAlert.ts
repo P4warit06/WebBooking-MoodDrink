@@ -14,12 +14,11 @@ export function useNewOrderAlert(orders: Order[]) {
 
     if (added.size > 0 && prevIds.current.size > 0) {
       setNewIds(added);
-      // เล่นเสียงแจ้งเตือน (optional)
-      try {
-        const audio = new Audio("/sounds/ding.mp3");
-        audio.volume = 0.5;
-        audio.play().catch(() => {});
-      } catch {}
+      const audio = new Audio("/sounds/ding.mp3");
+      audio.volume = 0.5;
+      audio.play().catch((error: unknown) => {
+        console.debug("New order sound was not played:", error);
+      });
       const timer = setTimeout(() => setNewIds(new Set()), 3000);
       return () => clearTimeout(timer);
     }

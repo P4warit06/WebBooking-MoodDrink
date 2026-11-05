@@ -12,65 +12,66 @@ import {
   writeBatch,
   serverTimestamp,
   Timestamp,
+  type DocumentData,
 } from "firebase/firestore";
 import { db } from "../../services/firebase";
-import type { Order, OrderStatus } from "../types";
+import type { Order, OrderItem, OrderStatus } from "../types";
 
-function fromFirestore(id: string, data: any): Order {
+function fromFirestore(id: string, data: DocumentData): Order {
+  const legacyItem: OrderItem = {
+    moodId: typeof data.moodId === "string" ? data.moodId : "",
+    drinkname: typeof data.drinkname === "string" ? data.drinkname : data.drinkName,
+    addons: Array.isArray(data.addons) ? data.addons : [],
+    sweetnessLevel: data.sweetnessLevel === "50%" || data.sweetnessLevel === "หวานมากพิเศษ" ? data.sweetnessLevel : "ปกติ",
+    price: typeof data.totalPrice === "number" ? data.totalPrice : 0,
+  };
+  const items: OrderItem[] = Array.isArray(data.items)
+    ? data.items.map((item: Partial<OrderItem>) => ({
+      moodId: typeof item.moodId === "string" ? item.moodId : "",
+      imageUrl: typeof item.imageUrl === "string" ? item.imageUrl : undefined,
+      drinkname: typeof item.drinkname === "string" ? item.drinkname : undefined,
+      drinkName: typeof item.drinkName === "string" ? item.drinkName : undefined,
+      addons: Array.isArray(item.addons) ? item.addons : [],
+      sweetnessLevel: item.sweetnessLevel === "50%" || item.sweetnessLevel === "หวานมากพิเศษ" ? item.sweetnessLevel : "ปกติ",
+      price: typeof item.price === "number" ? item.price : 0,
+    }))
+    : (data.moodId || data.drinkname || data.drinkName ? [legacyItem] : []);
+
   return {
     id,
-    ...data,
+    queueNumber: typeof data.queueNumber === "number" ? data.queueNumber : 0,
+    customerName: typeof data.customerName === "string" ? data.customerName : "ลูกค้า",
+    items,
+    totalPrice: typeof data.totalPrice === "number" ? data.totalPrice : 0,
+    promotionDiscount: typeof data.promotionDiscount === "number" ? data.promotionDiscount : undefined,
+    hasPolaroidDiscount: Boolean(data.hasPolaroidDiscount),
+    status: data.status === "making" || data.status === "ready" || data.status === "completed" || data.status === "cancelled" ? data.status : "pending",
     createdAt: (data.createdAt as Timestamp)?.toMillis?.() ?? Date.now(),
     updatedAt: (data.updatedAt as Timestamp)?.toMillis?.() ?? Date.now(),
     servedAt: data.servedAt ? (data.servedAt as Timestamp).toMillis() : null,
   };
 }
 
-// Kitchen Display (Page A): orders still in the pipeline, oldest first.
-// This requires a composite index on (status, queueNumber) — Firestore
-// will show a "create index" link in the console the first time this runs.
-export function useActiveOrders() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const q = query(
-      collection(db, "orders"),
-      where("status", "in", ["pending", "making"]),
-      orderBy("queueNumber", "asc")
-    );
-    const unsubscribe = onSnapshot(
-      q,
-      (snap) => {
-        setOrders(snap.docs.map((d) => fromFirestore(d.id, d.data())));
-        setLoading(false);
-      },
-      (err) => {
-        console.error("useActiveOrders subscription failed:", err);
-        setLoading(false);
-      }
-    );
-    return unsubscribe;
-  }, []);
-
-  return { orders, loading };
-}
-
-// Queue Management (Page B): every order created today, any status —
-// used for the pending/ready/completed summary counts and the full list.
+// Subscribe to the current queue and surface connection errors to the UI.
 export function useTodayOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("queueNumber", "asc"));
-    const unsubscribe = onSnapshot(q, (snap) => {
+    return onSnapshot(q, (snap) => {
       setOrders(snap.docs.map((d) => fromFirestore(d.id, d.data())));
+      setLoading(false);
+      setError(null);
+    }, (err) => {
+      console.error("Orders subscription failed:", err);
+      setError("โหลดข้อมูลคิวไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อและสิทธิ์ Firebase");
+      setLoading(false);
     });
-    return unsubscribe;
-  
   }, []);
 
-  return orders;
+  return { orders, loading, error };
 }
 
 // Called from the barista's "กำลังทำ → พร้อมเสิร์ฟ" button, and from
