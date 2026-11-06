@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mood Drink">
+  <defs>
+    <linearGradient id="cup" x1="16" x2="49" y1="53" y2="17" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e56d91" />
+      <stop offset="1" stop-color="#bf79bd" />
+    </linearGradient>
+    <linearGradient id="background" x1="8" x2="56" y1="8" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff4e9" />
+      <stop offset="1" stop-color="#f4dce9" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="21" fill="url(#background)" />
+  <path d="m37 9 10 4-8 18-8-3z" fill="#6f9c91" stroke="#fffaf5" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+  <path d="M17 24h31l-3.2 26.2A6 6 0 0 1 38.8 55H26.2a6 6 0 0 1-6-4.8L17 24Z" fill="url(#cup)" stroke="#fffaf5" stroke-linejoin="round" stroke-width="2.5" />
+  <path d="M17 24c0-3 7.1-5.5 15.5-5.5S48 21 48 24s-7.1 5.5-15.5 5.5S17 27 17 24Z" fill="#fffaf5" stroke="#fffaf5" stroke-width="2" />
+  <path d="M22 34h21" stroke="#ffe8dc" stroke-linecap="round" stroke-width="2" opacity=".85" />
+  <circle cx="27" cy="40" r="2" fill="#fff5e8" />
+  <circle cx="35" cy="45" r="2.2" fill="#fff5e8" />
+  <circle cx="40" cy="37" r="1.6" fill="#fff5e8" />
+</svg>

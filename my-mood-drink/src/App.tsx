@@ -6,7 +6,7 @@ import { ResultCustomizationPage } from "./order/components/customer/ResultCusto
 import { QueueCheckoutPage } from "./order/components/customer/QueueCheckoutPage";
 import { ConfirmationPage } from "./order/components/customer/ConfirmationPage";
 import { FeedbackPage } from "./order/components/customer/FeedbackPage";
-import { BottomNav, type NavTab } from "./BottomNav";
+
 import type { Mood, OrderDraft } from "./order/types";
 type Page = "home" | "mood" | "result" | "checkout" | "confirmation" | "feedback";
 
@@ -34,11 +34,9 @@ export default function App() {
     setPage("confirmation");
   };
 
-  const showBottomNav = page === "home";
 
-  const handleNavigate = (tab: NavTab) => {
-    if (tab === "home") goHome();
-  };
+
+  
 
   return (
     <div
@@ -50,7 +48,7 @@ export default function App() {
       }}
     >
       <div className={`mx-auto w-full ${page === "feedback" ? "max-w-2xl" : "max-w-5xl"} min-h-screen flex flex-col relative`}>
-        <div className={`flex-1 flex flex-col ${showBottomNav ? "pb-24" : ""}`}>
+        <div className={`flex-1 flex flex-col`}>
           <AnimatePresence mode="wait">
             <motion.div
               key={page}
@@ -118,12 +116,7 @@ export default function App() {
           </AnimatePresence>
         </div>
 
-        {showBottomNav && (
-          <BottomNav
-            active="home"
-            onNavigate={handleNavigate}
-          />
-        )}
+       
       </div>
     </div>
   );
