@@ -8,7 +8,11 @@ import { DrinkImage } from "../shared/DrinkImage";
 import { OrderFlowHeader } from "../shared/OrderFlowHeader";
 import type { Mood, OrderDraft, SweetnessLevel } from "../../types";
 
-const SWEETNESS_LEVELS: SweetnessLevel[] = ["50%", "ปกติ", "หวานมากพิเศษ"];
+const SWEETNESS_LEVELS: SweetnessLevel[] = ["ปกติ", "หวานมากพิเศษ"];
+
+function GrassJellyIcon() {
+  return <span className="addon-icon grass-jelly-icon" role="img" aria-label="วุ้นเฉาก๊วย"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M9 23h30l-3.1 14.1A5 5 0 0 1 31 41H17a5 5 0 0 1-4.9-3.9L9 23Z" fill="#EED6C2" /><path d="M11 23c0-4.4 5.8-7 13-7s13 2.6 13 7-5.8 7-13 7-13-2.6-13-7Z" fill="#F9E9DB" /><path d="M16 21.5h16v7H16z" rx="2" fill="#4B403C" /><path d="m16 21.5 8-4 8 4-8 4z" fill="#655650" /><path d="m16 28.5 8-4 8 4-8 4z" fill="#3B302D" /><path d="M18 13c1.6-3.2 4.1-4.8 7.4-4.8M26 13c1.4-2.6 3.5-3.9 6.4-3.9" stroke="#79905D" strokeLinecap="round" strokeWidth="2.2" /></svg></span>;
+}
 interface ResultCustomizationPageProps {
   moods: Mood[];
   initialDraft?: OrderDraft | null;
@@ -49,14 +53,14 @@ export function ResultCustomizationPage({ moods, initialDraft, onBack, onConfirm
         <div className="featured-price"><span>ราคาแก้วนี้{moods.length === 3 ? "ก่อนโปรโมชั่น" : ""}</span><strong>{items[activeIndex].total} <small>บาท</small></strong></div>
       </motion.section>
       <div className="customization-options">
-        <section className="order-clay-card"><div className="clay-section-heading"><span className="clay-section-icon peach">01</span><div><h2>หวานแค่ไหนกำลังดี</h2><p>ปรับความหวานสำหรับแก้วนี้</p></div></div><div className="clay-choice-group">{SWEETNESS_LEVELS.map(level => <button key={level} className={currentCust.sweetness === level ? "selected" : ""} onClick={() => setSweetness(level)} aria-pressed={currentCust.sweetness === level}>{level === "50%" ? "หวานน้อย 50%" : level}</button>)}</div></section>
+        <section className="order-clay-card"><div className="clay-section-heading"><span className="clay-section-icon peach">01</span><div><h2>หวานแค่ไหนกำลังดี</h2><p>ปรับความหวานสำหรับแก้วนี้</p></div></div><div className="clay-choice-group">{SWEETNESS_LEVELS.map(level => <button key={level} className={currentCust.sweetness === level ? "selected" : ""} onClick={() => setSweetness(level)} aria-pressed={currentCust.sweetness === level}>{level}</button>)}</div></section>
         <section className="order-clay-card"><div className="clay-section-heading"><span className="clay-section-icon">02</span><div><h2>เติมความสนุกให้แก้วโปรด</h2><p>ท็อปปิ้งเลือกเพิ่มได้ตามใจ</p></div><span className="clay-count">{currentCust.addonIds.length}</span></div>
           {loading && <p role="status" className="flex items-center gap-2 order-footnote"><LoaderCircle size={16} className="animate-spin" /> กำลังโหลดท็อปปิ้ง...</p>}
           {error && <p role="alert" className="order-error">{error}</p>}
           <div className="clay-addon-list">{addonOptions.length ? addonOptions.map(addon => {
             const selected = currentCust.addonIds.includes(addon.id);
             return <button key={addon.id} onClick={() => toggleAddon(addon.id)} className={`clay-addon ${selected ? "selected" : ""}`} aria-pressed={selected}>
-              {addon.imageUrl ? <DrinkImage src={addon.imageUrl} name={addon.name} /> : <span className="addon-letter" aria-hidden="true">{addon.name.slice(0,1)}</span>}
+              {addon.imageUrl ? <DrinkImage src={addon.imageUrl} name={addon.name} /> : addon.name.includes("เฉาก๊วย") ? <GrassJellyIcon /> : <span className="addon-letter" aria-hidden="true">{addon.name.slice(0,1)}</span>}
               <span className="addon-copy"><strong>{addon.name}</strong><small>+ {addon.price} บาท</small></span><span className="addon-check">{selected ? <Check size={16} /> : <Plus size={16} />}</span>
             </button>;
           }) : !loading && !error && <p className="order-footnote">ยังไม่มีท็อปปิ้งให้เลือก</p>}</div>
