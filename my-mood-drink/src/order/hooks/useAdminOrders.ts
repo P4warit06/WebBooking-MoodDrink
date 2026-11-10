@@ -22,7 +22,7 @@ function fromFirestore(id: string, data: DocumentData): Order {
     moodId: typeof data.moodId === "string" ? data.moodId : "",
     drinkname: typeof data.drinkname === "string" ? data.drinkname : data.drinkName,
     addons: Array.isArray(data.addons) ? data.addons : [],
-    sweetnessLevel: data.sweetnessLevel === "50%" || data.sweetnessLevel === "หวานมากพิเศษ" ? data.sweetnessLevel : "ปกติ",
+    sweetnessLevel: data.sweetnessLevel === "หวานมากพิเศษ" ? "หวานมากพิเศษ" : "ปกติ",
     price: typeof data.totalPrice === "number" ? data.totalPrice : 0,
   };
   const items: OrderItem[] = Array.isArray(data.items)
@@ -32,7 +32,7 @@ function fromFirestore(id: string, data: DocumentData): Order {
       drinkname: typeof item.drinkname === "string" ? item.drinkname : undefined,
       drinkName: typeof item.drinkName === "string" ? item.drinkName : undefined,
       addons: Array.isArray(item.addons) ? item.addons : [],
-      sweetnessLevel: item.sweetnessLevel === "50%" || item.sweetnessLevel === "หวานมากพิเศษ" ? item.sweetnessLevel : "ปกติ",
+      sweetnessLevel: item.sweetnessLevel === "หวานมากพิเศษ" ? "หวานมากพิเศษ" : "ปกติ",
       price: typeof item.price === "number" ? item.price : 0,
     }))
     : (data.moodId || data.drinkname || data.drinkName ? [legacyItem] : []);

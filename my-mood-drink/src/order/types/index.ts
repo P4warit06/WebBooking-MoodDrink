@@ -21,7 +21,7 @@ export interface Addon {
   imageUrl?: string;
 }
 
-export type SweetnessLevel = "50%" | "ปกติ" | "หวานมากพิเศษ";
+export type SweetnessLevel = "ปกติ" | "หวานมากพิเศษ";
 
 export type OrderStatus =
   | "pending"
