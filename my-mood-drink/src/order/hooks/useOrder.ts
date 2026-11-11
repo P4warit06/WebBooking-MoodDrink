@@ -33,6 +33,9 @@ export async function createOrder(
   draft: OrderDraft,
   checkout: {
     customerName: string;
+    fulfillmentMethod: "pickup" | "delivery";
+    requestedAt: string;
+    deliveryLocation?: string;
     hasPolaroidDiscount: boolean;
     finalTotal: number;
   }
@@ -69,11 +72,15 @@ export async function createOrder(
     } = {
       queueNumber: nextQueueNumber,
       customerName: checkout.customerName,
+      fulfillmentMethod: checkout.fulfillmentMethod,
+      requestedAt: checkout.requestedAt,
+      ...(checkout.fulfillmentMethod === "delivery" ? { deliveryLocation: checkout.deliveryLocation } : {}),
       items: orderItems,
       totalPrice: checkout.finalTotal,
       promotionDiscount: draft.promotionDiscount,
       hasPolaroidDiscount: checkout.hasPolaroidDiscount,
       status: "pending",
+      paymentStatus: "awaiting_payment",
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       servedAt: null,

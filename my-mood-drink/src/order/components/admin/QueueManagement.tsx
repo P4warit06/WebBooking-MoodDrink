@@ -31,7 +31,8 @@ function formatDate(ms: number) {
 }
 
 export function QueueManagement() {
-    const { orders, loading, error } = useTodayOrders();
+    const { orders: allOrders, loading, error } = useTodayOrders();
+    const orders = allOrders.filter(order => !order.paymentStatus || order.paymentStatus === "verified");
     const { moods } = useMoods(true);
     const [busyId, setBusyId] = useState<string | null>(null);
     const [search, setSearch] = useState("");

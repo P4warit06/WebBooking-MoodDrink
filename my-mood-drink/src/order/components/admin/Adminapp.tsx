@@ -5,6 +5,7 @@ import { auth } from "../../../services/firebase";
 import { AdminGate } from "./AdminGate";
 import { Dashboard } from "./Dashboard";
 import { QueueManagement } from "./QueueManagement";
+import { PaymentNotifications } from "./PaymentNotifications";
 
 
 function AdminShell() {
@@ -50,6 +51,8 @@ function AdminShell() {
           </button>
         </div>
       </div>
+
+      <PaymentNotifications />
 
       <Routes>
         <Route index element={<Navigate to="dashboard" replace />} />

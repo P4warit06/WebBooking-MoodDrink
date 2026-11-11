@@ -9,9 +9,10 @@ interface HomePageProps {
   onPickMood: () => void;
   onBookQueue: () => void;
   onFeedback: () => void;
+  onResumeOrder?: () => void;
 }
 
-export function HomePage({ onPickMood, onFeedback }: HomePageProps) {
+export function HomePage({ onPickMood, onFeedback, onResumeOrder }: HomePageProps) {
   const reduceMotion = useReducedMotion();
   const reveal = (delay = 0) => ({
     initial: reduceMotion ? (false as const) : { opacity: 0, y: 16 },
@@ -57,6 +58,7 @@ export function HomePage({ onPickMood, onFeedback }: HomePageProps) {
           >
             ค้นหาเครื่องดื่มที่ใช่ <ArrowRight size={19} />
           </motion.button>
+          {onResumeOrder && <button className="order-home-link" onClick={onResumeOrder}>กลับไปดูการชำระเงิน / คิวล่าสุด</button>}
         </div>
         <div className="hero-art">
           <motion.span

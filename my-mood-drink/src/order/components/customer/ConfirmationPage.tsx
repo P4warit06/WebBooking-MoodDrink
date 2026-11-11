@@ -5,6 +5,7 @@ import type { Mood, Order } from "../../types";
 import { OrderFlowHeader } from "../shared/OrderFlowHeader";
 import { OrderItems } from "../shared/OrderItems";
 import { OrderTotals } from "../shared/OrderTotals";
+import { formatRequestedTime } from "../../utils/fulfillment";
 
 interface ConfirmationPageProps {
   orderId: string;
@@ -33,6 +34,7 @@ export function OrderConfirmation({ order, moods, onAddAnother, onHome, onFeedba
 } & Omit<ConfirmationPageProps, "orderId">) {
   const status = statuses[order.status] || statuses.pending;
   const ready = order.status === "ready" || order.status === "completed";
+  const delivery = order.fulfillmentMethod === "delivery";
   return <main className="clay-order-page">
     <OrderFlowHeader step={4} />
     <div className="confirmation-layout">
@@ -40,7 +42,8 @@ export function OrderConfirmation({ order, moods, onAddAnother, onHome, onFeedba
         <span className="eyebrow">A HAPPY SIP IS ON THE WAY</span><h1>คิวของคุณ</h1>
         <div className="queue-number">#{String(order.queueNumber).padStart(2, "0")}</div>
         <p className="queue-owner">คุณ {order.customerName || "ลูกค้า"} · {order.items?.length || 0} แก้ว</p>
-        <div className="queue-status" role="status" aria-live="polite"><span className="queue-status-icon">{ready ? <Check size={24} /> : <Clock3 size={24} />}</span><h2>{status.title}</h2><p>{status.text}</p></div>
+        {order.requestedAt && <div className="order-fulfillment-summary"><p><strong>{delivery ? "เวลาที่ต้องการให้ส่ง" : "เวลาที่ต้องการมารับ"}:</strong> {formatRequestedTime(order.requestedAt)} (โดยประมาณ)</p><p><strong>วิธีรับ:</strong> {delivery ? `ให้เดินไปส่ง · ${order.deliveryLocation || "ไม่ระบุสถานที่"}` : "รับที่หน้าร้าน"}</p>{!delivery && <p>หากเครื่องดื่มเสร็จแล้ว มารับได้ตามเวลาที่เลือก พนักงานจะประกาศเรียกคิวเป็นระยะ ๆ</p>}</div>}
+        <div className="queue-status" role="status" aria-live="polite"><span className="queue-status-icon">{ready ? <Check size={24} /> : <Clock3 size={24} />}</span><h2>{status.title}</h2><p>{ready && delivery ? "พนักงานจะนำเครื่องดื่มไปส่งยังจุดที่ระบุ" : status.text}</p></div>
         {order.status !== "cancelled" && <ol className="queue-progress" aria-label="สถานะออเดอร์">{["รับออเดอร์", "กำลังทำ", "พร้อมรับ"].map((label, index) => <li className={status.step >= index + 1 ? "done" : ""} key={label}><span>{status.step > index + 1 || ready ? <Check size={13} /> : index + 1}</span>{label}</li>)}</ol>}
       </section>
       <section className="order-clay-card confirmation-receipt">

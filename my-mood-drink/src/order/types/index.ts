@@ -50,11 +50,16 @@ export interface Order {
   id: string;
   queueNumber: number;
   customerName: string;
+  fulfillmentMethod?: "pickup" | "delivery";
+  requestedAt?: string;
+  deliveryLocation?: string;
   items: OrderItem[]; // Changed from single moodId/drinkName
   totalPrice: number;
   promotionDiscount?: number;
   hasPolaroidDiscount: boolean;
   status: OrderStatus;
+  paymentStatus?: "awaiting_payment" | "submitted" | "verified" | "rejected";
+  paymentMessage?: string;
   createdAt: number; // millis, converted from Firestore Timestamp
   updatedAt: number;
   servedAt: number | null;
