@@ -41,9 +41,34 @@ service cloud.firestore {
     // Customers submit an order and can retrieve the single order ID stored
     // on their device. Only staff can list, update, or delete the queue.
     match /orders/{orderId} {
-      allow create: if request.resource.data.status == "pending";
+      allow create: if request.resource.data.status == "pending"
+        && request.resource.data.paymentStatus == "awaiting_payment"
+        && request.resource.data.totalPrice is number
+        && request.resource.data.totalPrice > 0;
       allow get: if true;
-      allow list, update, delete: if staff();
+      allow list, delete: if staff();
+      allow update: if staff() || (
+        resource.data.paymentStatus in ["awaiting_payment", "rejected"]
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["paymentStatus", "updatedAt"])
+        && request.resource.data.paymentStatus == "submitted"
+        && request.resource.data.updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/paymentSlips/$(orderId)).data.submittedAt == request.time
+      );
+    }
+
+    match /paymentSlips/{orderId} {
+      function validSlip() {
+        return exists(/databases/$(database)/documents/orders/$(orderId))
+          && get(/databases/$(database)/documents/orders/$(orderId)).data.paymentStatus in ["awaiting_payment", "rejected"]
+          && request.resource.data.keys().hasOnly(["orderId", "imageData", "submittedAt"])
+          && request.resource.data.orderId == orderId
+          && request.resource.data.imageData is string
+          && request.resource.data.imageData.matches('data:image/jpeg;base64,.*')
+          && request.resource.data.imageData.size() < 750000
+          && request.resource.data.submittedAt == request.time;
+      }
+      allow create, update: if validSlip();
+      allow read, delete: if staff();
     }
 
     // Required by the public order transaction that allocates queue numbers.

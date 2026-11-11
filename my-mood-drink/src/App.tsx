@@ -5,10 +5,11 @@ import { MoodSelectionPage } from "./order/components/customer/MoodSelectionPage
 import { ResultCustomizationPage } from "./order/components/customer/ResultCustomizationPage";
 import { QueueCheckoutPage } from "./order/components/customer/QueueCheckoutPage";
 import { ConfirmationPage } from "./order/components/customer/ConfirmationPage";
+import { PaymentPage } from "./order/components/customer/PaymentPage";
 import { FeedbackPage } from "./order/components/customer/FeedbackPage";
 
 import type { Mood, OrderDraft } from "./order/types";
-type Page = "home" | "mood" | "result" | "checkout" | "confirmation" | "feedback";
+type Page = "home" | "mood" | "result" | "checkout" | "payment" | "confirmation" | "feedback";
 
 const LAST_ORDER_KEY = "moodDrink:lastOrderId";
 
@@ -31,7 +32,7 @@ export default function App() {
   const handleSubmitted = (id: string) => {
     localStorage.setItem(LAST_ORDER_KEY, id);
     setOrderId(id);
-    setPage("confirmation");
+    setPage("payment");
   };
 
 
@@ -63,6 +64,7 @@ export default function App() {
                   onPickMood={() => setPage("mood")}
                   onBookQueue={() => setPage("mood")}
                   onFeedback={() => setPage("feedback")}
+                  onResumeOrder={orderId ? () => setPage("payment") : undefined}
                 />
               )}
 
@@ -105,6 +107,10 @@ export default function App() {
                   onHome={goHome}
                   onFeedback={() => setPage("feedback")}
                 />
+              )}
+
+              {page === "payment" && orderId && (
+                <PaymentPage orderId={orderId} onPaid={() => setPage("confirmation")} onHome={goHome} />
               )}
 
               {page === "feedback" && (

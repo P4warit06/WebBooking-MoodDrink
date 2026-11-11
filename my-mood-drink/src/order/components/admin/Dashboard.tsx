@@ -9,7 +9,8 @@ export function Dashboard() {
   const { orders, loading, error } = useTodayOrders();
   const { moods } = useMoods(true);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const active = orders.filter(o => o.status === "pending" || o.status === "making" || o.status === "ready");
+  const paidOrders = orders.filter(o => !o.paymentStatus || o.paymentStatus === "verified");
+  const active = paidOrders.filter(o => o.status === "pending" || o.status === "making" || o.status === "ready");
   const update = async (id: string) => {
     setBusyId(id);
     try { await updateOrderStatus(id, "ready"); }
@@ -21,7 +22,7 @@ export function Dashboard() {
       <div className="flex items-center gap-3"><span className="bg-white p-3 rounded-2xl text-violet-600"><Coffee /></span><div><h1 className="text-xl sm:text-2xl font-bold">Mood Drink <span className="font-normal">Barista</span></h1><p className="text-xs text-violet-700 mt-1">● รายการอัปเดตอัตโนมัติ · {active.length} คิวที่กำลังดำเนินการ</p></div></div><LiveClock />
     </header>
     <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-7">
-      <div className="grid grid-cols-3 gap-3 mb-8">{[["รอจัดเตรียม", "pending", "bg-violet-100 text-violet-800"], ["กำลังทำ", "making", "bg-amber-100 text-amber-800"], ["พร้อมเสิร์ฟ", "ready", "bg-emerald-100 text-emerald-800"]].map(([label,status,color]) => <div key={status} className={`rounded-2xl p-4 ${color}`}><p className="text-xs sm:text-sm font-semibold">{label}</p><p className="text-2xl font-bold mt-1">{orders.filter(o => o.status === status).length}</p></div>)}</div>
+      <div className="grid grid-cols-3 gap-3 mb-8">{[["รอจัดเตรียม", "pending", "bg-violet-100 text-violet-800"], ["กำลังทำ", "making", "bg-amber-100 text-amber-800"], ["พร้อมเสิร์ฟ", "ready", "bg-emerald-100 text-emerald-800"]].map(([label,status,color]) => <div key={status} className={`rounded-2xl p-4 ${color}`}><p className="text-xs sm:text-sm font-semibold">{label}</p><p className="text-2xl font-bold mt-1">{paidOrders.filter(o => o.status === status).length}</p></div>)}</div>
       <h2 className="text-lg font-bold mb-4">รายการเครื่องดื่ม</h2>
       {loading && <p className="flex gap-2 items-center text-slate-500 py-8" role="status"><LoaderCircle className="animate-spin" size={20} /> กำลังโหลดออเดอร์...</p>}
       {error && <p role="alert" className="rounded-2xl bg-red-50 text-red-700 p-4">{error}</p>}
