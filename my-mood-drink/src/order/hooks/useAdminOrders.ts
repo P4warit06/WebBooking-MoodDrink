@@ -15,6 +15,7 @@ import {
   type DocumentData,
 } from "firebase/firestore";
 import { db } from "../../services/firebase";
+import { syncOrderToGoogleSheet } from "../../services/googleSheets";
 import type { Order, OrderItem, OrderStatus } from "../types";
 
 function fromFirestore(id: string, data: DocumentData): Order {
@@ -88,6 +89,11 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
     updatedAt: serverTimestamp(),
     ...(status === "ready" ? { servedAt: null } : {}),
     ...(status === "completed" ? { servedAt: serverTimestamp() } : {}),
+  });
+  void syncOrderToGoogleSheet({
+    orderId,
+    status,
+    updatedAt: new Date().toISOString(),
   });
 }
 

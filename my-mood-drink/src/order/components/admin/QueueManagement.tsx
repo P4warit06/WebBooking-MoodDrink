@@ -32,7 +32,7 @@ function formatDate(ms: number) {
 
 export function QueueManagement() {
     const { orders: allOrders, loading, error } = useTodayOrders();
-    const orders = allOrders.filter(order => !order.paymentStatus || order.paymentStatus === "verified");
+    const orders = useMemo(() => allOrders.filter(order => !order.paymentStatus || order.paymentStatus === "verified"), [allOrders]);
     const { moods } = useMoods(true);
     const [busyId, setBusyId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
@@ -41,6 +41,8 @@ export function QueueManagement() {
     const pending = orders.filter((o) => o.status === "pending" || o.status === "making");
     const ready = orders.filter((o) => o.status === "ready");
     const completed = orders.filter((o) => o.status === "completed");
+    const totalGlasses = orders.filter(o => o.status !== "cancelled").reduce((sum, order) => sum + (order.items?.length || 0), 0);
+    const totalSales = orders.filter(o => o.status !== "cancelled").reduce((sum, order) => sum + (order.totalPrice || 0), 0);
 
     const currentlyServing = ready[0] ?? null;
     const nextInQueue = pending.find((o) => o.status === "pending") ?? null;
@@ -291,6 +293,7 @@ export function QueueManagement() {
                 <div className="flex flex-col gap-6">
                     <div className="rounded-[2rem] bg-white border border-neutral-100 p-8 shadow-sm">
                         <p className="text-xl font-bold text-neutral-900 mb-6">Queue Summary</p>
+                        <div className="grid grid-cols-2 gap-3 mb-4"><div className="rounded-2xl bg-pink-50 py-4 text-center"><p className="text-[11px] font-bold text-pink-500">GLASSES</p><p className="text-2xl font-extrabold text-pink-700">{totalGlasses}</p><p className="text-xs text-pink-600">แก้ว</p></div><div className="rounded-2xl bg-sky-50 py-4 text-center"><p className="text-[11px] font-bold text-sky-500">SALES</p><p className="text-2xl font-extrabold text-sky-700">{totalSales.toLocaleString("th-TH")}</p><p className="text-xs text-sky-600">บาท</p></div></div>
                         <div className="grid grid-cols-2 gap-4 text-center">
                             <div className="rounded-2xl bg-blue-50/50 py-6 flex flex-col items-center justify-center">
                                 <p className="text-[11px] font-bold text-blue-500 tracking-wider mb-2">PENDING</p>

@@ -2,13 +2,14 @@ import { useState, type FormEvent } from "react";
 import { doc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { ArrowRight, LoaderCircle, Upload } from "lucide-react";
 import { db } from "../../../services/firebase";
+import { syncOrderToGoogleSheet } from "../../../services/googleSheets";
 import shopPaymentQr from "../../../assets/Slip MoodDrink.jpg";
 import { useOrderStatus } from "../../hooks/useOrder";
 import { formatRequestedTime } from "../../utils/fulfillment";
 
 const qrUrl =
   (import.meta.env.VITE_PAYMENT_QR_URL as string | undefined) || shopPaymentQr;
-const maxSlipSize = 4 * 1024 * 1024;
+const maxSlipSize = 10 * 1024 * 1024;
 
 async function compressSlip(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -67,7 +68,7 @@ export function PaymentPage({
       !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
       file.size > maxSlipSize
     ) {
-      setError("กรุณาใช้ไฟล์ JPG, PNG หรือ WebP ขนาดไม่เกิน 4 MB");
+      setError("กรุณาใช้ไฟล์ JPG, PNG หรือ WebP ขนาดไม่เกิน 10 MB");
       return;
     }
     setBusy(true);
@@ -84,6 +85,12 @@ export function PaymentPage({
         updatedAt: serverTimestamp(),
       });
       await batch.commit();
+      void syncOrderToGoogleSheet({
+        orderId,
+        paymentStatus: "submitted",
+        lastSlipSubmittedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
       setFile(null);
     } catch (cause) {
       console.error("Slip upload failed:", cause);
@@ -130,7 +137,7 @@ export function PaymentPage({
         <form className="order-clay-card payment-slip-card" onSubmit={submit}>
           <h2>อัปโหลดสลิปโอนเงิน</h2>
           <p className="order-footnote">
-            รองรับ JPG, PNG, WebP ไม่เกิน 4 MB
+            รองรับ JPG, PNG, WebP ไม่เกิน 10 MB
             กรุณาใช้ภาพที่อ่านยอดและชื่อผู้รับได้ชัดเจน
           </p>
           <label className="payment-file-label" htmlFor="payment-slip">

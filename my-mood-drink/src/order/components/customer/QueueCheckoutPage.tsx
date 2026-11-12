@@ -71,7 +71,7 @@ export function QueueCheckoutPage({ orderDraft, onBack, onSubmitted }: QueueChec
         <section className="order-clay-card">
           <div className="clay-section-heading"><span className="clay-section-icon peach"><UserRound size={21} /></span><div><h2>ให้เราเรียกคุณว่าอะไรดี</h2><p>ใช้สำหรับเรียกคิวรับเครื่องดื่ม</p></div></div>
           <label className="clay-label" htmlFor="queue-name">ชื่อเล่น หรือเบอร์โต๊ะ</label>
-          <input id="queue-name" name="customerName" autoComplete="given-name" className="order-clay-input" value={name} onChange={e => setName(e.target.value)} placeholder="เช่น มายด์ / โต๊ะ 3" required disabled={submitting} />
+          <input id="queue-name" name="customerName" autoComplete="given-name" className="order-clay-input" value={name} onChange={e => setName(e.target.value)} placeholder="เช่น คุณมายด์ / บูธ A3" required disabled={submitting} />
         </section>
         <section className="order-clay-card fulfillment-card">
           <div className="clay-section-heading"><span className="clay-section-icon peach"><Clock3 size={21} /></span><div><h2>รับเครื่องดื่มเมื่อไรดี</h2><p>เลือกเวลาโดยประมาณที่สะดวก</p></div></div>

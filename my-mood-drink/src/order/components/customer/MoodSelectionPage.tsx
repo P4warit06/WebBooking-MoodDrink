@@ -8,11 +8,11 @@ import { DrinkImage } from "../shared/DrinkImage";
 import { OrderFlowHeader } from "../shared/OrderFlowHeader";
 import { MoodIcebreaker } from "./MoodIcebreaker";
 
-interface MoodSelectionPageProps { onBack: () => void; onSelectMoods: (moods: Mood[]) => void }
+interface MoodSelectionPageProps { onBack: () => void; onSelectMoods: (moods: Mood[]) => void; initialSelectedMoods?: Mood[] }
 
-export function MoodSelectionPage({ onBack, onSelectMoods }: MoodSelectionPageProps) {
+export function MoodSelectionPage({ onBack, onSelectMoods, initialSelectedMoods = [] }: MoodSelectionPageProps) {
   const { moods, loading } = useMoods();
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => initialSelectedMoods.map(mood => mood.id));
   const selectedMoods = useMemo(() => selectedIds.flatMap(id => {
     const mood = moods.find(item => item.id === id);
     return mood ? [mood] : [];

@@ -8,6 +8,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "../../services/firebase";
+import { syncOrderToGoogleSheet } from "../../services/googleSheets";
 import type { Order, OrderDraft, OrderStatus } from "../types";
 import { localMenuPhoto, moodDrinkName } from "../utils/menu";
 
@@ -43,12 +44,14 @@ export async function createOrder(
   const dateKey = bangkokDateKey();
   const counterRef = doc(db, "dailyCounters", dateKey);
   const orderRef = doc(collection(db, "orders"));
+  let createdQueueNumber = 0;
 
   await runTransaction(db, async (tx) => {
     const counterSnap = await tx.get(counterRef);
     const nextQueueNumber = counterSnap.exists()
       ? counterSnap.data().lastQueueNumber + 1
       : 1;
+    createdQueueNumber = nextQueueNumber;
 
     tx.set(
       counterRef,
@@ -87,6 +90,23 @@ export async function createOrder(
     };
 
     tx.set(orderRef, order);
+  });
+
+  void syncOrderToGoogleSheet({
+    orderId: orderRef.id,
+    queueNumber: createdQueueNumber,
+    customerName: checkout.customerName,
+    fulfillmentMethod: checkout.fulfillmentMethod,
+    requestedAt: checkout.requestedAt,
+    deliveryLocation: checkout.deliveryLocation,
+    items: draft.items.map((item) => `${moodDrinkName(item.mood)}${item.addons.length ? ` (${item.addons.map((addon) => addon.name).join(", ")})` : ""}`).join(" | "),
+    glasses: draft.items.length,
+    totalPrice: checkout.finalTotal,
+    promotionDiscount: draft.promotionDiscount,
+    paymentStatus: "awaiting_payment",
+    status: "pending",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   });
 
   return orderRef.id;
