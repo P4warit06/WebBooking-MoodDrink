@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Search, RotateCcw, Eraser, Coffee, Bell, Calendar, ShoppingBag, LoaderCircle } from "lucide-react";
-import { useTodayOrders, updateOrderStatus, resetDay, clearCompletedOrders } from "../../hooks/useAdminOrders";
+import { useTodayOrders, updateOrderStatus, resetDay, clearCompletedOrders, cancelOrderForOutOfStock } from "../../hooks/useAdminOrders";
 import type { Order } from "../../types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMoods } from "../../hooks/useMood";
@@ -79,6 +79,19 @@ export function QueueManagement() {
         }
     };
 
+    const handleOutOfStock = async (order: Order) => {
+        if (!confirm(`ยืนยันยกเลิกคิว #${String(order.queueNumber).padStart(2, "0")} เนื่องจากสินค้าหมด? สลิปที่ลูกค้าอัปโหลดจะถูกลบด้วย`)) return;
+        setBusyId(order.id);
+        try {
+            await cancelOrderForOutOfStock(order.id);
+        } catch (e) {
+            console.error(e);
+            alert("ยกเลิกออเดอร์ไม่สำเร็จ กรุณาลองอีกครั้ง");
+        } finally {
+            setBusyId(null);
+        }
+    };
+
     const handleResetQueue = async () => {
         if (!confirm(`จบวันนี้และเคลียร์คิวทั้งหมด (${orders.length} ออเดอร์)? ข้อมูลจะถูกย้ายไปเก็บใน orderHistory ก่อน ไม่ได้ลบทิ้ง`)) return;
         setBusy(true);
@@ -112,7 +125,7 @@ export function QueueManagement() {
     const currentDateString = formatDate(now.getTime());
 
     return (
-        <div className="min-h-screen w-full bg-[#fcfcfd] px-4 py-6 md:px-8 font-sans">
+        <main className="min-h-screen w-full px-4 py-6 md:px-8">
             {/* Header */}
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
                 <div className="flex items-center gap-4">
@@ -141,7 +154,7 @@ export function QueueManagement() {
             {/* Currently serving / next up */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 {/* Currently Serving Card */}
-                <div className="rounded-[2rem] bg-[#4ab88a] text-white p-8 relative overflow-hidden shadow-lg shadow-emerald-500/20">
+                <div className="queue-serving rounded-[2rem] text-white p-6 sm:p-8 relative overflow-hidden">
                     <p className="text-xs font-bold tracking-widest text-emerald-50 mb-2 uppercase">Currently Serving</p>
                     {currentlyServing ? (
                         <div className="flex items-center justify-between mt-4">
@@ -268,7 +281,7 @@ export function QueueManagement() {
                                         {formatClock(o.createdAt)}
                                     </div>
 
-                                    <div className="md:col-span-2 flex justify-end">
+                                    <div className="md:col-span-2 flex justify-end gap-2">
                                         {o.status === "ready" ? (
                                             <button
                                                 onClick={() => handlePickUp(o)}
@@ -278,6 +291,7 @@ export function QueueManagement() {
                                                 {busyId === o.id ? <span className="flex items-center gap-1"><LoaderCircle size={14} className="animate-spin" /> กำลังอัปเดต...</span> : "รับแล้ว"}
                                             </button>
                                         ) : null}
+                                        {o.status !== "completed" && o.status !== "cancelled" && <button type="button" onClick={() => handleOutOfStock(o)} disabled={busyId !== null} className="px-3 py-2 rounded-xl bg-rose-50 text-rose-600 text-xs font-bold hover:bg-rose-100 disabled:opacity-50">{busyId === o.id ? "กำลังยกเลิก..." : "ของหมด · ยกเลิก"}</button>}
                                     </div>
                                     <details className="md:col-span-12 bg-slate-50 rounded-2xl p-3">
                                         <summary className="cursor-pointer text-sm font-semibold text-violet-700">ดูรายละเอียดเครื่องดื่ม</summary>
@@ -324,6 +338,6 @@ export function QueueManagement() {
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
     );
 }

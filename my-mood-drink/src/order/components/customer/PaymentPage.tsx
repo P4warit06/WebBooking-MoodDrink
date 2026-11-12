@@ -52,6 +52,7 @@ export function PaymentPage({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const verified = order?.paymentStatus === "verified";
+  const cancelled = order?.status === "cancelled";
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -118,7 +119,7 @@ export function PaymentPage({
             {order ? `${order.totalPrice} บาท` : "กำลังโหลดยอด..."}
           </strong>
           {order?.requestedAt && <p className="order-footnote">{order.fulfillmentMethod === "delivery" ? "ให้เดินไปส่ง" : "รับที่หน้าร้าน"} · {formatRequestedTime(order.requestedAt)} โดยประมาณ{order.fulfillmentMethod === "delivery" && order.deliveryLocation ? ` · ${order.deliveryLocation}` : ""}</p>}
-          {qrUrl ? (
+          {cancelled ? <p role="status" className="order-error">ออเดอร์นี้ถูกยกเลิกเนื่องจากสินค้าหมด {order?.paymentMessage ? `· ${order.paymentMessage}` : ""}</p> : qrUrl ? (
             <img
               className="payment-qr"
               src={qrUrl}
@@ -149,7 +150,7 @@ export function PaymentPage({
             type="file"
             accept="image/jpeg,image/png,image/webp"
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            disabled={busy || verified || order?.paymentStatus === "submitted"}
+            disabled={busy || verified || cancelled || order?.paymentStatus === "submitted"}
           />
           {error && (
             <p role="alert" className="order-error">
@@ -161,7 +162,7 @@ export function PaymentPage({
               {order.paymentMessage || "สลิปไม่ผ่านการตรวจสอบ กรุณาลองอีกครั้ง"}
             </p>
           )}
-          {verified ? (
+          {cancelled ? <p className="payment-pending-button">ยกเลิกออเดอร์แล้ว · สลิปถูกนำออกจากระบบ</p> : verified ? (
             <p role="status" className="payment-success">
               พนักงานตรวจสลิปและยืนยันคิวแล้ว
             </p>

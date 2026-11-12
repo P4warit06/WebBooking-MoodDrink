@@ -41,11 +41,11 @@ export default function App() {
 
   return (
     <div
-      className="min-h-screen w-full transition-colors duration-500 animate-gradient-bg"
+      className="customer-app-root min-h-screen w-full transition-colors duration-500 animate-gradient-bg"
       style={{
         background:
-          "linear-gradient(135deg, #fff8f2, #fcebed, #f3edf8)",
-        backgroundSize: "400% 400%",
+          "radial-gradient(circle at 12% 8%, rgba(186, 230, 253, .7), transparent 34%), radial-gradient(circle at 88% 14%, rgba(221, 214, 254, .72), transparent 32%), linear-gradient(135deg, #edf6ff, #f8f1ff 52%, #fff5f8)",
+        backgroundSize: "180% 180%",
       }}
     >
       <div className={`mx-auto w-full ${page === "feedback" ? "max-w-2xl" : "max-w-5xl"} min-h-screen flex flex-col relative`}>
