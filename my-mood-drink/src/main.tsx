@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import App from "./App";
 import AdminApp from "../src/order/components/admin/Adminapp";
 import "./index.css";
+import "./glassmorphism.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

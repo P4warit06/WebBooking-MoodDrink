@@ -18,7 +18,7 @@ import { db } from "../../services/firebase";
 import { syncOrderToGoogleSheet } from "../../services/googleSheets";
 import type { Order, OrderItem, OrderStatus } from "../types";
 
-function fromFirestore(id: string, data: DocumentData): Order {
+export function fromFirestore(id: string, data: DocumentData): Order {
   const legacyItem: OrderItem = {
     moodId: typeof data.moodId === "string" ? data.moodId : "",
     drinkname: typeof data.drinkname === "string" ? data.drinkname : data.drinkName,
@@ -58,6 +58,32 @@ function fromFirestore(id: string, data: DocumentData): Order {
   };
 }
 
+export type HistoryOrder = Order & { archivedAt: number };
+
+export function useOrderHistory() {
+  const [orders, setOrders] = useState<HistoryOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = query(collection(db, "orderHistory"), orderBy("archivedAt", "desc"));
+    return onSnapshot(q, (snap) => {
+      setOrders(snap.docs.map((item) => ({
+        ...fromFirestore(item.id, item.data()),
+        archivedAt: (item.data().archivedAt as Timestamp)?.toMillis?.() ?? Date.now(),
+      })));
+      setLoading(false);
+      setError(null);
+    }, (cause) => {
+      console.error("Order history subscription failed:", cause);
+      setError("โหลดประวัติออเดอร์ไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Firebase");
+      setLoading(false);
+    });
+  }, []);
+
+  return { orders, loading, error };
+}
+
 // Subscribe to the current queue and surface connection errors to the UI.
 export function useTodayOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -93,6 +119,24 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus) {
   void syncOrderToGoogleSheet({
     orderId,
     status,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// Cancel an order when an item is unavailable and remove its uploaded slip.
+export async function cancelOrderForOutOfStock(orderId: string) {
+  const batch = writeBatch(db);
+  batch.update(doc(db, "orders", orderId), {
+    status: "cancelled",
+    paymentMessage: "ออเดอร์ถูกยกเลิกเนื่องจากสินค้าหมด",
+    updatedAt: serverTimestamp(),
+  });
+  batch.delete(doc(db, "paymentSlips", orderId));
+  await batch.commit();
+  void syncOrderToGoogleSheet({
+    orderId,
+    status: "cancelled",
+    paymentMessage: "ออเดอร์ถูกยกเลิกเนื่องจากสินค้าหมด",
     updatedAt: new Date().toISOString(),
   });
 }
