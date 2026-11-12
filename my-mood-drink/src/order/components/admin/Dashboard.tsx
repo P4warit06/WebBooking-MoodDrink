@@ -11,6 +11,9 @@ export function Dashboard() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const paidOrders = orders.filter(o => !o.paymentStatus || o.paymentStatus === "verified");
   const active = paidOrders.filter(o => o.status === "pending" || o.status === "making" || o.status === "ready");
+  const completedOrders = paidOrders.filter(o => o.status !== "cancelled");
+  const totalGlasses = completedOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0);
+  const totalSales = completedOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
   const update = async (id: string) => {
     setBusyId(id);
     try { await updateOrderStatus(id, "ready"); }
@@ -23,6 +26,7 @@ export function Dashboard() {
     </header>
     <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-7">
       <div className="grid grid-cols-3 gap-3 mb-8">{[["รอจัดเตรียม", "pending", "bg-violet-100 text-violet-800"], ["กำลังทำ", "making", "bg-amber-100 text-amber-800"], ["พร้อมเสิร์ฟ", "ready", "bg-emerald-100 text-emerald-800"]].map(([label,status,color]) => <div key={status} className={`rounded-2xl p-4 ${color}`}><p className="text-xs sm:text-sm font-semibold">{label}</p><p className="text-2xl font-bold mt-1">{paidOrders.filter(o => o.status === status).length}</p></div>)}</div>
+      <div className="grid grid-cols-2 gap-3 mb-8"><div className="rounded-2xl p-4 bg-pink-100 text-pink-800"><p className="text-xs sm:text-sm font-semibold">จำนวนแก้ววันนี้</p><p className="text-2xl font-bold mt-1">{totalGlasses} <span className="text-sm font-medium">แก้ว</span></p></div><div className="rounded-2xl p-4 bg-sky-100 text-sky-800"><p className="text-xs sm:text-sm font-semibold">ยอดขายรวมวันนี้</p><p className="text-2xl font-bold mt-1">{totalSales.toLocaleString("th-TH")} <span className="text-sm font-medium">บาท</span></p></div></div>
       <h2 className="text-lg font-bold mb-4">รายการเครื่องดื่ม</h2>
       {loading && <p className="flex gap-2 items-center text-slate-500 py-8" role="status"><LoaderCircle className="animate-spin" size={20} /> กำลังโหลดออเดอร์...</p>}
       {error && <p role="alert" className="rounded-2xl bg-red-50 text-red-700 p-4">{error}</p>}

@@ -156,6 +156,10 @@ npm run lint     # ตรวจรูปแบบและข้อผิดพ�
 npm run preview  # ดูเว็บไซต์หลัง build
 ```
 
+## เชื่อมข้อมูลกับ Google Sheet
+
+เว็บไซต์รองรับการส่งออเดอร์ จำนวนแก้ว ยอดขาย สถานะชำระเงิน และสถานะคิวไปยังชีตที่กำหนด โดยใช้ Google Apps Script เป็น webhook เพื่อไม่เก็บ service-account key ไว้ในฝั่งลูกค้า ดูขั้นตอนเต็มและโค้ด webhook ได้ที่ [my-mood-drink/GOOGLE_SHEETS_SETUP.md](my-mood-drink/GOOGLE_SHEETS_SETUP.md)
+
 ## การตั้งค่า Firebase สำหรับพนักงาน
 
 1. เปิด **Firebase Authentication** และเปิดวิธีเข้าสู่ระบบแบบ **Email/Password**

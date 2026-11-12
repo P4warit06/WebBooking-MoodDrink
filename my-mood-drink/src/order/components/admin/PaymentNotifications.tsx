@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Bell, Check, LoaderCircle, X } from "lucide-react";
 import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "../../../services/firebase";
+import { syncOrderToGoogleSheet } from "../../../services/googleSheets";
 import { useTodayOrders } from "../../hooks/useAdminOrders";
 import { formatRequestedTime } from "../../utils/fulfillment";
 
@@ -30,6 +31,13 @@ export function PaymentNotifications() {
         paymentMessage: approved ? "พนักงานยืนยันยอดโอนแล้ว" : "สลิปยังไม่ผ่านการตรวจสอบ กรุณาตรวจยอดและบัญชีผู้รับแล้วส่งใหม่",
         updatedAt: serverTimestamp(),
         ...(approved ? { paymentVerifiedAt: serverTimestamp() } : {}),
+      });
+      void syncOrderToGoogleSheet({
+        orderId,
+        paymentStatus: approved ? "verified" : "rejected",
+        paymentMessage: approved ? "พนักงานยืนยันยอดโอนแล้ว" : "สลิปยังไม่ผ่านการตรวจสอบ กรุณาตรวจยอดและบัญชีผู้รับแล้วส่งใหม่",
+        ...(approved ? { paymentVerifiedAt: new Date().toISOString() } : {}),
+        updatedAt: new Date().toISOString(),
       });
     } catch (cause) {
       console.error("Payment review failed:", cause);

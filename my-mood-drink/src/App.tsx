@@ -71,8 +71,11 @@ export default function App() {
               {page === "mood" && (
                 <MoodSelectionPage
                   onBack={goHome}
+                  initialSelectedMoods={selectedMoods}
                   onSelectMoods={(moods) => {
-                    setOrderDraft(null);
+                    const sameSelection = orderDraft?.items.length === moods.length
+                      && orderDraft.items.every((item, index) => item.mood.id === moods[index]?.id);
+                    if (!sameSelection) setOrderDraft(null);
                     setSelectedMoods(moods);
                     setPage("result");
                   }}
