@@ -5,6 +5,17 @@ import type { Order } from "../../types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMoods } from "../../hooks/useMood";
 import { OrderDetails } from "./OrderDetails";
+import { AppModal } from "../shared/AppModal";
+
+type QueueConfirmAction =
+    | { kind: "cancel"; order: Order }
+    | { kind: "reset" };
+
+type QueueNotice = {
+    title: string;
+    description: string;
+    tone: "info" | "success" | "danger";
+};
 
 const STATUS_LABEL: Record<string, string> = {
     pending: "รอจัดเตรียม",
@@ -37,12 +48,15 @@ export function QueueManagement() {
     const [busyId, setBusyId] = useState<string | null>(null);
     const [search, setSearch] = useState("");
     const [busy, setBusy] = useState(false);
+    const [confirmAction, setConfirmAction] = useState<QueueConfirmAction | null>(null);
+    const [notice, setNotice] = useState<QueueNotice | null>(null);
 
     const pending = orders.filter((o) => o.status === "pending" || o.status === "making");
     const ready = orders.filter((o) => o.status === "ready");
     const completed = orders.filter((o) => o.status === "completed");
-    const totalGlasses = orders.filter(o => o.status !== "cancelled").reduce((sum, order) => sum + (order.items?.length || 0), 0);
-    const totalSales = orders.filter(o => o.status !== "cancelled").reduce((sum, order) => sum + (order.totalPrice || 0), 0);
+    const verifiedOrders = allOrders.filter(o => o.paymentStatus === "verified" && o.status !== "cancelled");
+    const totalGlasses = verifiedOrders.reduce((sum, order) => sum + (order.items?.length || 0), 0);
+    const totalSales = verifiedOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
 
     const currentlyServing = ready[0] ?? null;
     const nextInQueue = pending.find((o) => o.status === "pending") ?? null;
@@ -61,7 +75,7 @@ export function QueueManagement() {
             await updateOrderStatus(order.id, "making");
         } catch (e) {
             console.error(e);
-            alert("อัปเดตไม่สำเร็จ ลองใหม่อีกครั้ง");
+            setNotice({ title: "อัปเดตคิวไม่สำเร็จ", description: "ไม่สามารถเปลี่ยนสถานะเป็นกำลังจัดเตรียมได้ กรุณาลองใหม่อีกครั้ง", tone: "danger" });
         } finally {
             setBusyId(null);
         }
@@ -73,34 +87,38 @@ export function QueueManagement() {
             await updateOrderStatus(order.id, "completed");
         } catch (e) {
             console.error(e);
-            alert("อัปเดตไม่สำเร็จ ลองใหม่อีกครั้ง");
+            setNotice({ title: "อัปเดตคิวไม่สำเร็จ", description: "ไม่สามารถบันทึกว่าลูกค้ารับเครื่องดื่มแล้ว กรุณาลองใหม่อีกครั้ง", tone: "danger" });
         } finally {
             setBusyId(null);
         }
     };
 
-    const handleOutOfStock = async (order: Order) => {
-        if (!confirm(`ยืนยันยกเลิกคิว #${String(order.queueNumber).padStart(2, "0")} เนื่องจากสินค้าหมด? สลิปที่ลูกค้าอัปโหลดจะถูกลบด้วย`)) return;
-        setBusyId(order.id);
-        try {
-            await cancelOrderForOutOfStock(order.id);
-        } catch (e) {
-            console.error(e);
-            alert("ยกเลิกออเดอร์ไม่สำเร็จ กรุณาลองอีกครั้ง");
-        } finally {
-            setBusyId(null);
+    const handleConfirmedAction = async () => {
+        const action = confirmAction;
+        if (!action) return;
+        if (action.kind === "cancel") {
+            setBusyId(action.order.id);
+            try {
+                await cancelOrderForOutOfStock(action.order.id);
+                setConfirmAction(null);
+                setNotice({ title: "ยกเลิกออเดอร์แล้ว", description: `คิว #${String(action.order.queueNumber).padStart(2, "0")} ถูกยกเลิกและนำสลิปออกเรียบร้อย`, tone: "success" });
+            } catch (e) {
+                console.error(e);
+                setNotice({ title: "ยกเลิกออเดอร์ไม่สำเร็จ", description: "ไม่สามารถยกเลิกออเดอร์ได้ กรุณาลองใหม่อีกครั้ง", tone: "danger" });
+            } finally {
+                setBusyId(null);
+            }
+            return;
         }
-    };
 
-    const handleResetQueue = async () => {
-        if (!confirm(`จบวันนี้และเคลียร์คิวทั้งหมด (${orders.length} ออเดอร์)? ข้อมูลจะถูกย้ายไปเก็บใน orderHistory ก่อน ไม่ได้ลบทิ้ง`)) return;
         setBusy(true);
         try {
             const count = await resetDay();
-            alert(`เคลียร์คิวแล้ว ${count} ออเดอร์ พร้อมเริ่มวันใหม่ที่คิว #1`);
+            setConfirmAction(null);
+            setNotice({ title: "เริ่มวันใหม่แล้ว", description: `ย้าย ${count} ออเดอร์เข้าประวัติเรียบร้อย คิวใหม่จะเริ่มที่ #1`, tone: "success" });
         } catch (e) {
             console.error(e);
-            alert("รีเซ็ตคิวไม่สำเร็จ ลองใหม่อีกครั้ง");
+            setNotice({ title: "รีเซ็ตคิวไม่สำเร็จ", description: "ไม่สามารถจบวันและเคลียร์คิวได้ กรุณาลองใหม่อีกครั้ง", tone: "danger" });
         } finally {
             setBusy(false);
         }
@@ -110,10 +128,10 @@ export function QueueManagement() {
         setBusy(true);
         try {
             const count = await clearCompletedOrders();
-            alert(`ย้ายออเดอร์ที่รับแล้ว ${count} รายการเข้าประวัติเรียบร้อย`);
+            setNotice({ title: "ย้ายเข้าประวัติแล้ว", description: `ย้ายออเดอร์ที่รับแล้ว ${count} รายการเข้าประวัติเรียบร้อย`, tone: "success" });
         } catch (e) {
             console.error(e);
-            alert("เคลียร์ไม่สำเร็จ ลองใหม่อีกครั้ง");
+            setNotice({ title: "ย้ายออเดอร์ไม่สำเร็จ", description: "ไม่สามารถย้ายรายการที่รับแล้วเข้าประวัติได้ กรุณาลองใหม่อีกครั้ง", tone: "danger" });
         } finally {
             setBusy(false);
         }
@@ -291,7 +309,7 @@ export function QueueManagement() {
                                                 {busyId === o.id ? <span className="flex items-center gap-1"><LoaderCircle size={14} className="animate-spin" /> กำลังอัปเดต...</span> : "รับแล้ว"}
                                             </button>
                                         ) : null}
-                                        {o.status !== "completed" && o.status !== "cancelled" && <button type="button" onClick={() => handleOutOfStock(o)} disabled={busyId !== null} className="px-3 py-2 rounded-xl bg-rose-50 text-rose-600 text-xs font-bold hover:bg-rose-100 disabled:opacity-50">{busyId === o.id ? "กำลังยกเลิก..." : "ของหมด · ยกเลิก"}</button>}
+                                        {o.status !== "completed" && o.status !== "cancelled" && <button type="button" onClick={() => setConfirmAction({ kind: "cancel", order: o })} disabled={busyId !== null} className="px-3 py-2 rounded-xl bg-rose-50 text-rose-600 text-xs font-bold hover:bg-rose-100 disabled:opacity-50">{busyId === o.id ? "กำลังยกเลิก..." : "ของหมด · ยกเลิก"}</button>}
                                     </div>
                                     <details className="md:col-span-12 bg-slate-50 rounded-2xl p-3">
                                         <summary className="cursor-pointer text-sm font-semibold text-violet-700">ดูรายละเอียดเครื่องดื่ม</summary>
@@ -307,7 +325,7 @@ export function QueueManagement() {
                 <div className="flex flex-col gap-6">
                     <div className="rounded-[2rem] bg-white border border-neutral-100 p-8 shadow-sm">
                         <p className="text-xl font-bold text-neutral-900 mb-6">Queue Summary</p>
-                        <div className="grid grid-cols-2 gap-3 mb-4"><div className="rounded-2xl bg-pink-50 py-4 text-center"><p className="text-[11px] font-bold text-pink-500">GLASSES</p><p className="text-2xl font-extrabold text-pink-700">{totalGlasses}</p><p className="text-xs text-pink-600">แก้ว</p></div><div className="rounded-2xl bg-sky-50 py-4 text-center"><p className="text-[11px] font-bold text-sky-500">SALES</p><p className="text-2xl font-extrabold text-sky-700">{totalSales.toLocaleString("th-TH")}</p><p className="text-xs text-sky-600">บาท</p></div></div>
+                        <div className="grid grid-cols-2 gap-3 mb-4"><div className="rounded-2xl bg-pink-50 py-4 text-center"><p className="text-[11px] font-bold text-pink-500">VERIFIED GLASSES</p><p className="text-2xl font-extrabold text-pink-700">{totalGlasses}</p><p className="text-xs text-pink-600">แก้ว</p></div><div className="rounded-2xl bg-sky-50 py-4 text-center"><p className="text-[11px] font-bold text-sky-500">VERIFIED SALES</p><p className="text-2xl font-extrabold text-sky-700">{totalSales.toLocaleString("th-TH")}</p><p className="text-xs text-sky-600">บาท</p></div></div>
                         <div className="grid grid-cols-2 gap-4 text-center">
                             <div className="rounded-2xl bg-blue-50/50 py-6 flex flex-col items-center justify-center">
                                 <p className="text-[11px] font-bold text-blue-500 tracking-wider mb-2">PENDING</p>
@@ -323,7 +341,7 @@ export function QueueManagement() {
                     <div className="flex flex-col gap-3">
                         <button
                             disabled={busy || busyId !== null}
-                            onClick={handleResetQueue}
+                            onClick={() => setConfirmAction({ kind: "reset" })}
                             className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-[#1e1e2d] text-white text-sm font-bold disabled:opacity-40 hover:bg-neutral-800 active:scale-[0.98] transition-all shadow-md"
                         >
                             {busy ? <LoaderCircle size={18} className="animate-spin" /> : <RotateCcw size={18} />} {busy ? "กำลังดำเนินการ..." : "Reset Queue"}
@@ -338,6 +356,27 @@ export function QueueManagement() {
                     </div>
                 </div>
             </div>
+            <AppModal
+                open={confirmAction !== null}
+                title={confirmAction?.kind === "cancel" ? "ยกเลิกออเดอร์เนื่องจากสินค้าหมด?" : "จบวันและเริ่มคิวใหม่?"}
+                description={confirmAction?.kind === "cancel"
+                    ? `คิว #${String(confirmAction.order.queueNumber).padStart(2, "0")} จะถูกยกเลิก และสลิปที่ลูกค้าอัปโหลดจะถูกนำออก`
+                    : `ออเดอร์ทั้งหมด ${orders.length} รายการจะถูกย้ายเข้าประวัติ แล้วเลขคิวจะเริ่มใหม่ที่ #1`}
+                tone="danger"
+                confirmLabel={confirmAction?.kind === "cancel" ? "ยืนยันยกเลิก" : "ยืนยันจบวัน"}
+                cancelLabel="กลับไปตรวจสอบ"
+                busy={busy || busyId !== null}
+                onConfirm={handleConfirmedAction}
+                onClose={() => setConfirmAction(null)}
+            />
+            <AppModal
+                open={notice !== null}
+                title={notice?.title ?? "แจ้งเตือน"}
+                description={notice?.description ?? ""}
+                tone={notice?.tone ?? "info"}
+                onConfirm={() => setNotice(null)}
+                onClose={() => setNotice(null)}
+            />
         </main>
     );
 }

@@ -79,6 +79,11 @@ export function PaymentPage({
       batch.set(doc(db, "paymentSlips", orderId), {
         orderId,
         imageData,
+        queueNumber: order.queueNumber,
+        customerName: order.customerName,
+        totalPrice: order.totalPrice,
+        glassCount: order.items.length,
+        orderCreatedAt: order.createdAt,
         submittedAt: serverTimestamp(),
       });
       batch.update(doc(db, "orders", orderId), {

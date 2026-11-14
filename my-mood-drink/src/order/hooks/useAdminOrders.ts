@@ -8,6 +8,7 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  getDoc,
   getDocs,
   writeBatch,
   serverTimestamp,
@@ -60,6 +61,16 @@ export function fromFirestore(id: string, data: DocumentData): Order {
 
 export type HistoryOrder = Order & { archivedAt: number };
 
+export type DeletedOrderHistoryRecord = {
+  id: string;
+  originalOrderId: string;
+  order: Order | null;
+  slipImageData?: string;
+  slipSubmittedAt: number;
+  deletedAt: number;
+  deletionReason: "payment_rejected" | "orphan_slip";
+};
+
 export function useOrderHistory() {
   const [orders, setOrders] = useState<HistoryOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +93,40 @@ export function useOrderHistory() {
   }, []);
 
   return { orders, loading, error };
+}
+
+export function useDeletedOrderHistory() {
+  const [records, setRecords] = useState<DeletedOrderHistoryRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const q = query(collection(db, "deletedOrderHistory"), orderBy("deletedAt", "desc"));
+    return onSnapshot(q, (snap) => {
+      setRecords(snap.docs.map((item) => {
+        const data = item.data();
+        const orderData = data.order as DocumentData | null | undefined;
+        const slipData = data.slip as DocumentData | null | undefined;
+        return {
+          id: item.id,
+          originalOrderId: typeof data.originalOrderId === "string" ? data.originalOrderId : item.id,
+          order: orderData ? fromFirestore(item.id, orderData) : null,
+          slipImageData: typeof slipData?.imageData === "string" ? slipData.imageData : undefined,
+          slipSubmittedAt: (slipData?.submittedAt as Timestamp)?.toMillis?.() ?? 0,
+          deletedAt: (data.deletedAt as Timestamp)?.toMillis?.() ?? Date.now(),
+          deletionReason: data.deletionReason === "payment_rejected" ? "payment_rejected" : "orphan_slip",
+        };
+      }));
+      setLoading(false);
+      setError(null);
+    }, (cause) => {
+      console.error("Deleted order history subscription failed:", cause);
+      setError("โหลดประวัติที่ถูกลบไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Firebase");
+      setLoading(false);
+    });
+  }, []);
+
+  return { records, loading, error };
 }
 
 // Subscribe to the current queue and surface connection errors to the UI.
@@ -139,6 +184,39 @@ export async function cancelOrderForOutOfStock(orderId: string) {
     paymentMessage: "ออเดอร์ถูกยกเลิกเนื่องจากสินค้าหมด",
     updatedAt: new Date().toISOString(),
   });
+}
+
+export async function archiveAndDeleteRejectedOrder(orderId: string) {
+  const currentRef = doc(db, "orders", orderId);
+  const historyRef = doc(db, "orderHistory", orderId);
+  const slipRef = doc(db, "paymentSlips", orderId);
+  const [currentSnap, historySnap, slipSnap] = await Promise.all([
+    getDoc(currentRef),
+    getDoc(historyRef),
+    getDoc(slipRef),
+  ]);
+
+  const orderSnap = currentSnap.exists() ? currentSnap : historySnap.exists() ? historySnap : null;
+  const orderData = orderSnap?.data() ?? null;
+  if (orderData && orderData.paymentStatus !== "rejected") {
+    throw new Error("ลบได้เฉพาะออเดอร์ที่ตรวจสลิปไม่ผ่าน");
+  }
+  if (!orderData && !slipSnap.exists()) {
+    throw new Error("ไม่พบออเดอร์หรือสลิปที่ต้องการลบ");
+  }
+
+  const batch = writeBatch(db);
+  batch.set(doc(db, "deletedOrderHistory", orderId), {
+    originalOrderId: orderId,
+    order: orderData,
+    slip: slipSnap.exists() ? slipSnap.data() : null,
+    deletionReason: orderData ? "payment_rejected" : "orphan_slip",
+    deletedAt: serverTimestamp(),
+  });
+  if (currentSnap.exists()) batch.delete(currentRef);
+  if (historySnap.exists()) batch.delete(historyRef);
+  if (slipSnap.exists()) batch.delete(slipRef);
+  await batch.commit();
 }
 
 function bangkokDateKey(d = new Date()): string {

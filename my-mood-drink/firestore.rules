@@ -60,11 +60,16 @@ service cloud.firestore {
       function validSlip() {
         return exists(/databases/$(database)/documents/orders/$(orderId))
           && get(/databases/$(database)/documents/orders/$(orderId)).data.paymentStatus in ["awaiting_payment", "rejected"]
-          && request.resource.data.keys().hasOnly(["orderId", "imageData", "submittedAt"])
+          && request.resource.data.keys().hasOnly(["orderId", "imageData", "queueNumber", "customerName", "totalPrice", "glassCount", "orderCreatedAt", "submittedAt"])
           && request.resource.data.orderId == orderId
           && request.resource.data.imageData is string
           && request.resource.data.imageData.matches('data:image/jpeg;base64,.*')
           && request.resource.data.imageData.size() < 750000
+          && request.resource.data.queueNumber == get(/databases/$(database)/documents/orders/$(orderId)).data.queueNumber
+          && request.resource.data.customerName == get(/databases/$(database)/documents/orders/$(orderId)).data.customerName
+          && request.resource.data.totalPrice == get(/databases/$(database)/documents/orders/$(orderId)).data.totalPrice
+          && request.resource.data.glassCount == get(/databases/$(database)/documents/orders/$(orderId)).data.items.size()
+          && request.resource.data.orderCreatedAt is number
           && request.resource.data.submittedAt == request.time;
       }
       allow create, update: if validSlip();
@@ -80,6 +85,11 @@ service cloud.firestore {
 
     match /orderHistory/{orderId} {
       allow read, write: if staff();
+    }
+
+    match /deletedOrderHistory/{orderId} {
+      allow read, create, update: if staff();
+      allow delete: if admin();
     }
   }
 }
