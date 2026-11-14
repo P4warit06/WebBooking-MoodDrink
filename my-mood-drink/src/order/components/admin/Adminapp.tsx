@@ -1,5 +1,5 @@
 import { NavLink, Routes, Route, Navigate , useNavigate} from "react-router-dom";
-import { LayoutGrid, ListOrdered, LogOut , Home, ChartNoAxesCombined, Archive } from "lucide-react";
+import { LayoutGrid, ListOrdered, LogOut , Home, ChartNoAxesCombined, Archive, Trash2 } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../services/firebase";
 import { AdminGate } from "./AdminGate";
@@ -8,6 +8,7 @@ import { QueueManagement } from "./QueueManagement";
 import { PaymentNotifications } from "./PaymentNotifications";
 import { SalesOverview } from "./SalesOverview";
 import { OrderHistory } from "./OrderHistory";
+import { DeletedOrderHistory } from "./DeletedOrderHistory";
 
 
 function AdminShell() {
@@ -40,6 +41,9 @@ function AdminShell() {
           <NavLink to="/admin/history" className={tabClass}>
             <Archive size={14} /> Order History
           </NavLink>
+          <NavLink to="/admin/deleted" className={tabClass}>
+            <Trash2 size={14} /> Deleted History
+          </NavLink>
         </div>
 
         <div className="flex items-center gap-2">
@@ -68,6 +72,7 @@ function AdminShell() {
         <Route path="queue" element={<QueueManagement />} />
         <Route path="sales" element={<SalesOverview />} />
         <Route path="history" element={<OrderHistory />} />
+        <Route path="deleted" element={<DeletedOrderHistory />} />
         <Route path="*" element={<Navigate to="dashboard" replace />} />
       </Routes>
     </div>

@@ -3,6 +3,7 @@ import { TopBar } from "../shared/TopBar";
 import { db } from "../../../services/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { Star, Send, CheckCircle2 } from "lucide-react";
+import { AppModal } from "../shared/AppModal";
 
 interface FeedbackPageProps {
   onBack: () => void;
@@ -24,6 +25,7 @@ export function FeedbackPage({ onBack }: FeedbackPageProps) {
   });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [notice, setNotice] = useState<{ title: string; description: string; tone: "info" | "danger" } | null>(null);
 
   const handleStarClick = (field: keyof FeedbackData, value: number) => {
     setFeedback((prev) => ({ ...prev, [field]: value }));
@@ -31,7 +33,7 @@ export function FeedbackPage({ onBack }: FeedbackPageProps) {
 
   const handleSubmit = async () => {
     if (feedback.priceValue === 0 || feedback.serviceValue === 0 || feedback.experienceValue === 0) {
-      alert("กรุณาให้คะแนนความพึงพอใจให้ครบทุกหัวข้อ");
+      setNotice({ title: "ยังให้คะแนนไม่ครบ", description: "กรุณาให้คะแนนความพึงพอใจให้ครบทุกหัวข้อก่อนส่งความคิดเห็น", tone: "info" });
       return;
     }
 
@@ -44,7 +46,7 @@ export function FeedbackPage({ onBack }: FeedbackPageProps) {
       setSubmitted(true);
     } catch (e) {
       console.error(e);
-      alert("เกิดข้อผิดพลาดในการส่งข้อมูล กรุณาลองใหม่อีกครั้ง");
+      setNotice({ title: "ส่งความคิดเห็นไม่สำเร็จ", description: "เกิดข้อผิดพลาดระหว่างบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง", tone: "danger" });
     } finally {
       setSubmitting(false);
     }
@@ -163,6 +165,14 @@ export function FeedbackPage({ onBack }: FeedbackPageProps) {
           )}
         </button>
       </div>
+      <AppModal
+        open={notice !== null}
+        title={notice?.title ?? "แจ้งเตือน"}
+        description={notice?.description ?? ""}
+        tone={notice?.tone ?? "info"}
+        onConfirm={() => setNotice(null)}
+        onClose={() => setNotice(null)}
+      />
     </div>
   );
 }

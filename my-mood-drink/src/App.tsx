@@ -44,7 +44,7 @@ export default function App() {
       className="customer-app-root min-h-screen w-full transition-colors duration-500 animate-gradient-bg"
       style={{
         background:
-          "radial-gradient(circle at 12% 8%, rgba(186, 230, 253, .7), transparent 34%), radial-gradient(circle at 88% 14%, rgba(221, 214, 254, .72), transparent 32%), linear-gradient(135deg, #edf6ff, #f8f1ff 52%, #fff5f8)",
+          "radial-gradient(circle at 12% 8%, rgba(250, 218, 221, .78), transparent 34%), radial-gradient(circle at 88% 14%, rgba(220, 214, 247, .76), transparent 32%), linear-gradient(135deg, #fff8f2, #fcebed 52%, #f3edf8)",
         backgroundSize: "180% 180%",
       }}
     >
